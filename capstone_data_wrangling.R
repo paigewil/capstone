@@ -93,6 +93,15 @@ df_clean %>% arrange(driver_age) %>% select(driver_age) %>% distinct()
 df_clean <- df_clean %>% mutate(driver_age = replace(driver_age, driver_age == "", NA))
 df_clean %>% filter(is.na(driver_age) == TRUE) %>% count()
 # -> 274 NAs
+# investigate spread of ages
+mean(df_clean$driver_age, na.rm = TRUE)
+# -> 38.11949
+median(df_clean$driver_age, na.rm = TRUE)
+# -> 35
+# -> Not much difference between median and mean
+class(df_clean$driver_age)
+# -> integer
+# -> since the ages are integers and the median is an integer & the mean and median are similar, I'll populate NAs with the median where appropriate
 
 #driver_race_raw
 df_clean %>% arrange(driver_race_raw) %>% select(driver_race_raw) %>% distinct()
@@ -199,11 +208,52 @@ df_split <- cSplit_e(df_split, "violation_raw", ",", mode = "binary", type = "ch
 write.csv(file = "E:/Learning/Springboard Intro to Data Science/capstone/CT_cleaned_split.csv", x=df_split, row.names = FALSE)
 
 
-#Summary
+#INVESTIGATION OF NAS
 #Columns (of interest) with NAs/missing values:
-# -> stop_time
-# -> county_name
-# -> driver_age
-# -> search_type
-# -> stop_outcome
-# -> is_arrested
+# -> stop_time: 222
+# -> county_name: 38
+# -> driver_age: 274
+# -> search_type: 313823
+# -> stop_outcome: 5356
+# -> is_arrested: 5356
+
+#How many total rows are effected:
+df_clean %>% filter(stop_time == "0:00") %>% select(stop_time, county_name, driver_age, search_type, stop_outcome, is_arrested) #%>% count()
+df_clean %>% filter(stop_time == "0:00" & is.na(search_type) == TRUE) %>% select(stop_time, county_name, driver_age, search_type, stop_outcome, is_arrested) %>% count()
+# -> 215, stop_time missing values also largely have search_type missing values, nothing else really
+df_clean %>% filter(county_name == "") %>% select(stop_time, county_name, driver_age, search_type, stop_outcome, is_arrested) #%>% count()
+# -> county_name missing values also largely have search_type missing values, no other columsn really
+df_clean %>% filter(is.na(driver_age) == TRUE) %>% select(stop_time, county_name, driver_age, search_type, stop_outcome, is_arrested) #%>% count()
+# -> county_name missing values also largely have search_type missing values, no other columsn really
+df_clean %>% filter(is.na(search_type) == TRUE) %>% select(stop_time, county_name, driver_age, search_type, stop_outcome, is_arrested) #%>% count()
+# Does search_type = NA coincide with search_conducted = FALSE?
+df_clean %>% filter(is.na(search_type) == TRUE & search_conducted == TRUE) %>% select(search_type, search_conducted) %>%  count()
+# -> 486 searches conducted with no search type
+df_clean %>% filter(is.na(search_type) == TRUE & search_conducted == FALSE) %>% select(search_type, search_conducted) %>%  count()
+# -> the rest of the blank value search_types (313337) coincide with search_conducted == FALSE, as expected
+# Any searches not conducted but there's a search type?
+df_clean %>% filter(is.na(search_type) != TRUE & search_conducted == FALSE) %>% select(search_type, search_conducted) %>%  count()
+# -> 0 as expected, no
+df_clean %>% filter(is.na(stop_outcome) == TRUE) %>% select(stop_time, county_name, driver_age, search_type, stop_outcome, is_arrested)
+df_clean %>% filter(is.na(stop_outcome) == TRUE & is.na(is_arrested) == TRUE) %>% select(stop_outcome, is_arrested) %>%  count()
+df_clean %>% filter(is.na(stop_outcome) == TRUE & is.na(is_arrested) != TRUE) %>% select(stop_outcome, is_arrested) %>%  count()
+# -> is_arrested and stop_outcome have same NAs
+df_clean %>% filter(is.na(is_arrested) == TRUE) %>% select(stop_time, county_name, driver_age, search_type, stop_outcome, is_arrested) #%>% count()
+df_clean %>% filter(is.na(is_arrested) == TRUE | stop_time == "0:00" | county_name == "" | is.na(driver_age) == TRUE| is.na(search_type) == TRUE | is.na(stop_outcome) == TRUE) %>% count()
+# -> 313879
+#finding rows where search_type != NA but other columns are
+df_clean %>% filter((is.na(is_arrested) == TRUE | stop_time == "0:00" | county_name == "" | is.na(driver_age) == TRUE | is.na(stop_outcome) == TRUE) & is.na(search_type) == FALSE) %>% select(stop_time, county_name, driver_age, search_type, stop_outcome, is_arrested)
+# -> largely due to stop_outcome and is_arrested NAs
+
+#Thoughts on how to handle NAs:
+# -> stop_time: When analyzing just time (not datetime), remove NAs from analysis. 
+#               For time series analysis (with datetime), to use other times, set to 0:00 since no other non-NA time is 0:00, so will be distinct and is the standard default time for a day with no time. 
+# -> county_name: Remove NAs from analysis since such small number and no logical way to interpolate a fill value (like a mean value).
+# -> driver_age: If just analyzing age, remove NAs.
+#                If using in combination with other columns that are populated in those rows, use median (see above for explanation).
+# -> search_type: There are 486 searches conducted with no search_type. Since a fill value can't logically be inferred, I'll ignore those NAs from analysis of search_type and search_conducted.
+# -> stop_outcome: Since this is one of the variables I'd like to predict, it makes no sense to populate missing values.
+#                  Similarly, there is no logical way to interpolate an "average" value to populate.                 
+# -> is_arrested: Since this is one of the variables I'd like to predict, it makes no sense to populate missing values
+
+
