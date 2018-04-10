@@ -21,27 +21,36 @@ df_clean %>% filter(id == "" | is.na(id) == TRUE)
 class(df_clean$stop_time)
 # -> character
 # can't change type to time
-# set time for unknown times to 0:00
+# set time for unknown times to 0:00 to make datetime field later
 df_clean$stop_time[df_clean$stop_time == ""] <- "0:00"
 
 #combine stop_date and stop_time and make into new column
 df_clean$stop_date_time <- paste(df_clean$stop_date, df_clean$stop_time, sep =" ")
 # change to datetime
 df_clean$stop_date_time2 <- as.POSIXct(df_clean$stop_date_time, format = "%m/%d/%Y %H:%M")
-# How many NAs are there?
+# How many NAs are there? 
+# -> due to daylight savings time
+#   -> CT observes DST so I will update these times one hour (0200 -> 0300)
 # df_clean %>% filter(stop_time == "") %>% select(stop_date_time)
-x <- df_clean %>% filter(is.na(stop_date_time2) == TRUE) %>% select(stop_date, stop_time, stop_date_time)
+x <- df_clean %>% filter(is.na(stop_date_time2) == TRUE) %>% select(stop_date, stop_time, stop_date_time, stop_date_time2)
+x_dst <- x$stop_date_time
+x_dst <- gsub(pattern = "2:", replacement = "3:", x = x_dst)
+df_clean[is.na(df_clean$stop_date_time2) == TRUE,]$stop_date_time <- x_dst
+# re-run stop_date_time2 calculations
+df_clean$stop_date_time2 <- as.POSIXct(df_clean$stop_date_time, format = "%m/%d/%Y %H:%M")
+
 
 #stop_date
 class(df_clean$stop_date)
 # -> character
 # change type to date
-df_clean$stop_date <- as.Date(df_clean$stop_date, "%m/%d/%Y")
+df_clean$stop_date <- as.POSIXct(df_clean$stop_date, format = "%m/%d/%Y")
 # Any NAs?
 df_clean %>% filter(is.na(stop_date) == TRUE)
 # -> no
 
-#location_raw
+
+#location_raw & fine_grained_location
 # Not going to clean because county_name & county_fips track location more cleanly
 
 #county_name
@@ -89,6 +98,7 @@ df_clean %>% arrange(driver_age_raw) %>% select(driver_age_raw) %>% distinct()
 #driver_age
 df_clean %>% arrange(driver_age) %>% select(driver_age) %>% distinct()
 # -> made < 15 blanks -- leave as is
+# Use this column over raw because < 15 entries have been cleared
 # make blanks NAs for easier use with is.na()
 df_clean <- df_clean %>% mutate(driver_age = replace(driver_age, driver_age == "", NA))
 df_clean %>% filter(is.na(driver_age) == TRUE) %>% count()
@@ -101,7 +111,10 @@ median(df_clean$driver_age, na.rm = TRUE)
 # -> Not much difference between median and mean
 class(df_clean$driver_age)
 # -> integer
-# -> since the ages are integers and the median is an integer & the mean and median are similar, I'll populate NAs with the median where appropriate
+ggplot(df_clean, aes(driver_age)) + geom_bar()
+# -> Since the ages are integers and the median is an integer & the mean and median are similar, I'll populate NAs with the median where appropriate.
+#    Additionally, the ages are positively skewed, so median is a better measure to use that is not as affected by the skew.
+
 
 #driver_race_raw
 df_clean %>% arrange(driver_race_raw) %>% select(driver_race_raw) %>% distinct()
@@ -111,7 +124,7 @@ df_clean %>% filter(driver_race_raw == "" | is.na(driver_race_raw) == TRUE)
 
 #driver_race
 df_clean %>% arrange(driver_race) %>% select(driver_race) %>% distinct()
-# -> use driver_race_raw since driver_race buckets into "other" which removes details
+# -> Use driver_race_raw since driver_race buckets into "other" which removes details
 
 #violation 
 # Any blanks? NAs?
@@ -132,11 +145,11 @@ dist_viol_raw <- as.vector(dist_viol_raw[[1]])
 subset(dist_viol_raw, !(tolower(dist_viol_raw) %in% tolower(dist_viol)))
 # -> 195 elements returned, i.e. not many similar violations
 # -> use raw since has more groupings, so more detail & the non-raw doesn't show much of an advantage so use original/source
-# separate violations into separate columns
+# separate distinct violations into separate columns
 # first: determine max violations for a stop
 no_viols <- str_count(dist_viol_raw, ",")
 max(no_viols) + 1
-# 5 -> number of new columns to create
+# 5 -> = number of new columns to create
 # second: create # of violations column & copy of violation_raw column to use in separate()
 df_clean <- df_clean %>% mutate(violation_raw2 = violation_raw,
                                 violation_count = str_count(violation_raw, ",") + 1)
@@ -154,7 +167,7 @@ df_clean %>% arrange(search_type) %>% select(search_type) %>% distinct()
 # change blanks to NAs
 df_clean <- df_clean %>% mutate(search_type = replace(search_type, search_type == "", NA))
 df_clean %>% count(search_type)
-# -> 313823 NAs found!!
+# -> 313823 NAs-- aligns closely with search_conducted == TRUE
 
 #contraband_found
 df_clean %>% select(contraband_found) %>% distinct()
@@ -195,17 +208,24 @@ df_clean$stop_duration_fact <- factor(df_clean$stop_duration, order = TRUE)
 
 
 #write df_clean to file
-write.csv(file = "E:/Learning/Springboard Intro to Data Science/capstone/CT_cleaned_edit3.csv", x=df_clean, row.names = FALSE)
+currentDate <- Sys.Date()
+df_clean_filename <- paste("E:/Learning/Springboard Intro to Data Science/capstone/CT_cleaned_edit", currentDate, ".csv", sep = "")
+write.csv(file = df_clean_filename, x=df_clean, row.names = FALSE)
+#write.csv(file = "E:/Learning/Springboard Intro to Data Science/capstone/CT_cleaned_edit4_10_2018.csv", x=df_clean, row.names = FALSE)
 
 #Make second data frame with different layout; splitting violation_raw:
 # solution found here: https://stackoverflow.com/questions/42387859/dummify-character-column-and-find-unique-values
 library(splitstackshape)
 
+#remove other violation columns to make datset smaller
 df_split <- df_clean %>% select(-(violation_raw1:violation_raw5))
+#split
 df_split <- cSplit_e(df_split, "violation_raw", ",", mode = "binary", type = "character", fill = 0)
 
 #write df_split to file
-write.csv(file = "E:/Learning/Springboard Intro to Data Science/capstone/CT_cleaned_split.csv", x=df_split, row.names = FALSE)
+df_split_filename <- paste("E:/Learning/Springboard Intro to Data Science/capstone/CT_cleaned_split", currentDate, ".csv", sep = "")
+write.csv(file = df_split_filename, x=df_split, row.names = FALSE)
+#write.csv(file = "E:/Learning/Springboard Intro to Data Science/capstone/CT_cleaned_split.csv", x=df_split, row.names = FALSE)
 
 
 #INVESTIGATION OF NAS
@@ -217,14 +237,14 @@ write.csv(file = "E:/Learning/Springboard Intro to Data Science/capstone/CT_clea
 # -> stop_outcome: 5356
 # -> is_arrested: 5356
 
-#How many total rows are effected:
+#How many total rows are affected:
 df_clean %>% filter(stop_time == "0:00") %>% select(stop_time, county_name, driver_age, search_type, stop_outcome, is_arrested) #%>% count()
 df_clean %>% filter(stop_time == "0:00" & is.na(search_type) == TRUE) %>% select(stop_time, county_name, driver_age, search_type, stop_outcome, is_arrested) %>% count()
 # -> 215, stop_time missing values also largely have search_type missing values, nothing else really
 df_clean %>% filter(county_name == "") %>% select(stop_time, county_name, driver_age, search_type, stop_outcome, is_arrested) #%>% count()
-# -> county_name missing values also largely have search_type missing values, no other columsn really
+# -> county_name missing values also largely have search_type missing values, no other columns really
 df_clean %>% filter(is.na(driver_age) == TRUE) %>% select(stop_time, county_name, driver_age, search_type, stop_outcome, is_arrested) #%>% count()
-# -> county_name missing values also largely have search_type missing values, no other columsn really
+# -> county_name missing values also largely have search_type missing values, no other columns really
 df_clean %>% filter(is.na(search_type) == TRUE) %>% select(stop_time, county_name, driver_age, search_type, stop_outcome, is_arrested) #%>% count()
 # Does search_type = NA coincide with search_conducted = FALSE?
 df_clean %>% filter(is.na(search_type) == TRUE & search_conducted == TRUE) %>% select(search_type, search_conducted) %>%  count()
@@ -244,6 +264,7 @@ df_clean %>% filter(is.na(is_arrested) == TRUE | stop_time == "0:00" | county_na
 #finding rows where search_type != NA but other columns are
 df_clean %>% filter((is.na(is_arrested) == TRUE | stop_time == "0:00" | county_name == "" | is.na(driver_age) == TRUE | is.na(stop_outcome) == TRUE) & is.na(search_type) == FALSE) %>% select(stop_time, county_name, driver_age, search_type, stop_outcome, is_arrested)
 # -> largely due to stop_outcome and is_arrested NAs
+# OVERALL: Most of the NA columns don't impact the NA status of other variables, save for search_conducted obviously influencing search_type.
 
 #Thoughts on how to handle NAs:
 # -> stop_time: When analyzing just time (not datetime), remove NAs from analysis. 
@@ -254,6 +275,9 @@ df_clean %>% filter((is.na(is_arrested) == TRUE | stop_time == "0:00" | county_n
 # -> search_type: There are 486 searches conducted with no search_type. Since a fill value can't logically be inferred, I'll ignore those NAs from analysis of search_type and search_conducted.
 # -> stop_outcome: Since this is one of the variables I'd like to predict, it makes no sense to populate missing values.
 #                  Similarly, there is no logical way to interpolate an "average" value to populate.                 
-# -> is_arrested: Since this is one of the variables I'd like to predict, it makes no sense to populate missing values
+# -> is_arrested: Since this is one of the variables I'd like to predict, it makes no sense to populate missing values.
 
-
+# Will be using:
+#   - search_type over search_type_raw
+#   - driver_race_raw over driver_race
+#   - driver_age over driver_age_raw
