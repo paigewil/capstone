@@ -1,0 +1,53 @@
+---
+title: "Introduction to Data Science Capstone Proposal: <br />An Analysis of Connecticut Police Traffic Stops"
+author: Paige Williams
+output: html_document
+bibliography: bibliography.bibtex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Problem
+In recent years, there has been a growing spotlight on the treatment (or rather, mistreatment) of citizens by police, particularly, citizens in the black community. This has caused many protests throughout the country and poor relationships with law enforcement. In an effort to police the police, this project will use machine learning to investigate what factors predict stop outcome and arrests made and which of those factors are demographic, contributing to the issue of police profiling. 
+
+
+### Client
+There are two possible clients who would benefit from the findings of this project:<br /> 
+
+1. Police departments seeking to identify and improve areas of bias and community relationships.
+    + In an effort to confront implicit bias and learn stategies to combat it, many police departments, like the Madison Police Department [@youtube], have implemented police bias training programs. To further aid in this initative, the findings from this project can help identify specific areas of improvement so the training can be catered to each department. The self-reflection and acknowledgement of shortcomings also provides law enforcement the opportunity to reach out to affected communities and work to better relationships, something the MPD has already started doing [@vetterkind_2015].
+2. General public/ watchdog agencies seeking to hold offending police departments accountable.
+    + With public scrutiny mounting, having an objective perspective on the offenses of police departments is important for transparency and truth. The project findings also help provide the groups with a way to identify a list of departments to focus reform efforts on. The Justice Department's Office of Community Oriented Policing Services (COPS) and civil rights division [@barrett_2017] partake in a number of initiatives to investigate and report on police departments failings as well as provide training. The work from this project could help futher those program goals.  
+    
+Overall, the analysis from this project can provide police departments with an objective perspective of the biases within their organization, informing the improvement actions necessary, and ultimately helping improve community relationships. 
+
+#####Cost: 
+The cost of these trainings can be expensive (\$4.5 million for the NYPD [@dimon_parascandola_2018] and \$100-\$300 per officer per day for 3 days to several weeks for another [@neuhauser_2016]) so having a clear understanding of a police department's biases will make the training more tailored and effective, ensuring the best investment.
+
+### Data
+The data I will be using comes from [The Stanford Open Policing Project](https://openpolicing.stanford.edu/) [@2017arXiv170605678P] and contains information on traffic stops throughout the United States. For this project, I will be focusing on data from Connecticut since, compared to other states, it includes more features for analysis. In total, the dataset contains 24 features across 318,669 observations (traffic stops), covering the time period from 10/1/2013 through 3/31/2015. The features are largely categorical, including information such as the driver's age and race, county of stop, if a search was conducted, and resulting violations. The dataset has been standardized from the raw data provided by the [Connecticut Data Collaborative](http://ctrp3.ctdata.org/rawdata/) and  includes some new fields, including a unique ID for each stop, county information (name and FIP), and stop duration.
+
+Additionally, to conduct an accurate analysis, I will need to calculate proportions of total demographic population for many of the features. I will be using ...BLANK... dataset to pull the necessary denominators demographic population proportions for gender, age, and race.  
+
+
+### Approach
+...COMPLETE...
+A supervised machine learning algorithm will be used to predict if a traffic stop will end in arrest and what the stop outcome will be. Additionally, some time-series analysis will be conducted to investigate the influence of time/day on traffic stop outcome. 
+
+One issue to address is that the demographic spread of predictor variables in the dataset may not align with the state/county demographic spread, negatively altering our perception of a characteristic's influence on outcome. Therefore, I will need to weight each demographic characteristic by its distribution in the total population (either by state or county, depending on what data is available). Additionally, the dataset does not cover complete calendar years, reporting only part of 2013 and 2015. For any summary time analysis done, I will need to apply weights, for example, to account for April's count being only for 2014 while March's is for 2014 and 2015. 
+
+### Deliverables
+The following items will be available on the project's [GitHub repository](https://github.com/paigewil/capstone):<br /> 
+
+* R code for:
+    + Data wrangling
+    + Exploratory data analysis
+    + Machine learning
+* Report explaing the analysis conducted and associated findings
+* Slide deck presentation, catered to a non-technical audience
+
+
+### References
+
