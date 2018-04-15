@@ -5,10 +5,6 @@ output: html_document
 bibliography: bibliography.bibtex
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
 ### Problem
 In recent years, there has been a growing spotlight on the treatment (or rather, mistreatment) of citizens by police, particularly, citizens in the black community. This has caused many protests throughout the country and poor relationships with law enforcement. In an effort to police the police, this project will use machine learning to investigate what factors predict stop outcome and arrests made and which of those factors are demographic, contributing to the issue of police profiling. 
 
