@@ -29,8 +29,10 @@ df_clean$stop_date_time <- paste(df_clean$stop_date, df_clean$stop_time, sep =" 
 # change to datetime
 df_clean$stop_date_time2 <- as.POSIXct(df_clean$stop_date_time, format = "%m/%d/%Y %H:%M")
 # How many NAs are there? 
-# -> due to daylight savings time
-#   -> CT observes DST so I will update these times one hour (0200 -> 0300)
+# -> The date/times that are NA are 3/9/2014 and 3/8/2015 in the 0200 hour time frame, which is
+#    Daylight Savings Time. Since 0200 - 0259 doesn't exist on those days and is technically
+#    0300- 0359, I will need to add an hour to those times. 
+# -> CT observes DST so I will update these times one hour (0200 -> 0300)
 # df_clean %>% filter(stop_time == "") %>% select(stop_date_time)
 x <- df_clean %>% filter(is.na(stop_date_time2) == TRUE) %>% select(stop_date, stop_time, stop_date_time, stop_date_time2)
 x_dst <- x$stop_date_time
@@ -70,7 +72,73 @@ df_clean %>% filter(county_name == "New London County") %>% select(county_fips) 
 # update county_name and county_fips for "rocky neck" matches
 df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*rocky neck*", x = tolower(fine_grained_location)), "New London County"),
                           county_fips = replace(county_fips, county_name == "New London County" & is.na(county_fips), 9011))
-# -> no other groups (patterns that appear more than once) to investigate-- 38 blank county_names left
+# update matches for "east lyme"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*east lyme*", x = tolower(fine_grained_location)), "New London County"),
+                                county_fips = replace(county_fips, county_name == "New London County" & is.na(county_fips), 9011))
+# update matches for "37 hov" with FIP 9003 and county name Hartford County
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*37 hov*", x = tolower(fine_grained_location)), "Hartford County"),
+                                county_fips = replace(county_fips, county_name == "Hartford County" & is.na(county_fips), 9003))
+# update matches for "niantic"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*niantic*", x = tolower(fine_grained_location)), "New London County"),
+                                county_fips = replace(county_fips, county_name == "New London County" & is.na(county_fips), 9011))
+# update matches for "terminal"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*terminal*", x = tolower(fine_grained_location)), "Hartford County"),
+                                county_fips = replace(county_fips, county_name == "Hartford County" & is.na(county_fips), 9003))
+# update matches for "I-95 sb 43"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*i-95 sb 43*", x = tolower(fine_grained_location)), "New Haven County"),
+                                county_fips = replace(county_fips, county_name == "New Haven County" & is.na(county_fips), 9009))
+#update matches for "rt 6/195"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*rt 6/195*", x = tolower(fine_grained_location)), "Tolland County"),
+                                county_fips = replace(county_fips, county_name == "Tolland County" & is.na(county_fips), 9013))
+# update matches for "schoeph"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*schoeph*", x = tolower(fine_grained_location)), "Hartford County"),
+                                county_fips = replace(county_fips, county_name == "Hartford County" & is.na(county_fips), 9003))
+# update matches for "e litchfield rd"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*e litchfield rd*", x = tolower(fine_grained_location)), "Litchfield County"),
+                                county_fips = replace(county_fips, county_name == "Litchfield County" & is.na(county_fips), 9005))
+# update matches for "T130"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*t130*", x = tolower(fine_grained_location)), "New Haven County"),
+                                county_fips = replace(county_fips, county_name == "New Haven County" & is.na(county_fips), 9009))
+# update matches for "RT 229 @ RT 72"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*rt 229 @ rt 72*", x = tolower(fine_grained_location)), "Hartford County"),
+                                county_fips = replace(county_fips, county_name == "Hartford County" & is.na(county_fips), 9003))
+#update matches for "i84 exit 9"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*i84 exit 9*", x = tolower(fine_grained_location)), "Fairfield County"),
+                                county_fips = replace(county_fips, county_name == "Fairfield County" & is.na(county_fips), 9001))
+# update matches for "liberty way"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*liberty way*", x = tolower(fine_grained_location)), "New London County"),
+                                county_fips = replace(county_fips, county_name == "New London County" & is.na(county_fips), 9011))
+# update matches for "rt 8 n ext 23"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*rt 8 n ext 23*", x = tolower(fine_grained_location)), "New Haven County"),
+                                county_fips = replace(county_fips, county_name == "New Haven County" & is.na(county_fips), 9009))
+# update matches for "i-91 south exit 4"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*i-91 south exit 4*", x = tolower(fine_grained_location)), "New Haven County"),
+                                county_fips = replace(county_fips, county_name == "New Haven County" & is.na(county_fips), 9009))
+# update matches for "rt 172"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*rt 172*", x = tolower(fine_grained_location)), "New Haven County"),
+                                county_fips = replace(county_fips, county_name == "New Haven County" & is.na(county_fips), 9009))
+# update matches for "91n x 34"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*91n x 34*", x = tolower(fine_grained_location)), "Hartford County"),
+                                county_fips = replace(county_fips, county_name == "Hartford County" & is.na(county_fips), 9003))
+# update matches for "main t045"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*main t045*", x = tolower(fine_grained_location)), "New London County"),
+                                county_fips = replace(county_fips, county_name == "New London County" & is.na(county_fips), 9011))
+# update matches for "91 n x 36"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*91 n x 36*", x = tolower(fine_grained_location)), "Hartford County"),
+                                county_fips = replace(county_fips, county_name == "Hartford County" & is.na(county_fips), 9003))
+# update matches for "fern"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*fern*", x = tolower(fine_grained_location)), "Litchfield County"),
+                                county_fips = replace(county_fips, county_name == "Litchfield County" & is.na(county_fips), 9005))
+# update matches for "nb south of exit 15" 
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*nb south of exit 15*", x = tolower(fine_grained_location)), "New Haven County"),
+                                county_fips = replace(county_fips, county_name == "New Haven County" & is.na(county_fips), 9009))
+#update matches for "x 64"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*x 64*", x = tolower(fine_grained_location)), "Middlesex County"),
+                                county_fips = replace(county_fips, county_name == "Middlesex County" & is.na(county_fips), 9007))
+#update matches for "post road fairfield"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*post road fairfield*", x = tolower(fine_grained_location)), "Fairfield County"),
+                                county_fips = replace(county_fips, county_name == "Fairfield County" & is.na(county_fips), 9001))
+# -> no other groups (patterns that appear more than once) to investigate-- 16 blank county_names left
 
 #county_fips
 df_clean %>% arrange(county_fips) %>% select(county_fips) %>% distinct()
@@ -112,8 +180,63 @@ median(df_clean$driver_age, na.rm = TRUE)
 class(df_clean$driver_age)
 # -> integer
 ggplot(df_clean, aes(driver_age)) + geom_bar()
+#    There seems to be a small bump towards age 100, indicating maybe some inaccuracy
+#    in capturing elderly individual's age. To investigate, count ages:
+age_table <- df_clean %>% arrange(driver_age) %>% group_by(driver_age) %>% count()
+tail(age_table, 25)
+# driver_age     n
+# <int> <int>
+#   1         76   426
+#   2         77   306
+#   3         78   356
+#   4         79   261
+#   5         80   295
+#   6         81   171
+#   7         82   166
+#   8         83   144
+#   9         84   135
+#   10         85   115
+# # ... with 15 more rows
+tail(age_table, 15)
+# driver_age     n
+# <int> <int>
+#   1         86    70
+#   2         87    69
+#   3         88    48
+#   4         89    30
+#   5         90    36
+#   6         91    22
+#   7         92    14
+#   8         93     6
+#   9         94     8
+#   10         95     7
+#   11         96     2
+#   12         97     3
+#   13         98     1
+#   14         99    84
+#   15         NA   274
+#    -> Bump seems to be coming from age 99. However, the 80s also seem to have a 
+#       high volume of people, so will make >= 80 NA.
+df_clean <- df_clean %>% mutate(driver_age = replace(driver_age, driver_age >= 80, NA))
+# Recheck mean and median age:
+mean(df_clean$driver_age, na.rm = TRUE)
+# -> 37.91098
+median(df_clean$driver_age, na.rm = TRUE)
+# -> 35
+# By gender
+df_clean %>% group_by(driver_gender) %>% summarise(mean(driver_age, na.rm = TRUE))
+# driver_gender `mean(driver_age, na.rm = TRUE)`
+# <chr>                                    <dbl>
+#   1 F                                         37.4
+#   2 M                                         38.2
+df_clean %>% group_by(driver_gender) %>% summarise(median(driver_age, na.rm = TRUE))
+# driver_gender `median(driver_age, na.rm = TRUE)`
+# <chr>                                      <dbl>
+#   1 F                                            35.
+#   2 M                                            36.
 # -> Since the ages are integers and the median is an integer & the mean and median are similar, I'll populate NAs with the median where appropriate.
 #    Additionally, the ages are positively skewed, so median is a better measure to use that is not as affected by the skew.
+#    To make the medians used even more accurate, I'll break up assignment based on gender, using 35 for Females nad 36 for Males.
 
 
 #driver_race_raw
@@ -209,7 +332,8 @@ df_clean$stop_duration_fact <- factor(df_clean$stop_duration, order = TRUE)
 
 #write df_clean to file
 currentDate <- Sys.Date()
-df_clean_filename <- paste("E:/Learning/Springboard Intro to Data Science/capstone/CT_cleaned_edit", currentDate, ".csv", sep = "")
+#df_clean_filename <- paste("E:/Learning/Springboard Intro to Data Science/capstone/CT_cleaned_edit", currentDate, ".csv", sep = "")
+df_clean_filename <- "E:/Learning/Springboard Intro to Data Science/capstone/CT_cleaned_edit.csv"
 write.csv(file = df_clean_filename, x=df_clean, row.names = FALSE)
 #write.csv(file = "E:/Learning/Springboard Intro to Data Science/capstone/CT_cleaned_edit4_10_2018.csv", x=df_clean, row.names = FALSE)
 
@@ -223,7 +347,8 @@ df_split <- df_clean %>% select(-(violation_raw1:violation_raw5))
 df_split <- cSplit_e(df_split, "violation_raw", ",", mode = "binary", type = "character", fill = 0)
 
 #write df_split to file
-df_split_filename <- paste("E:/Learning/Springboard Intro to Data Science/capstone/CT_cleaned_split", currentDate, ".csv", sep = "")
+#df_split_filename <- paste("E:/Learning/Springboard Intro to Data Science/capstone/CT_cleaned_split", currentDate, ".csv", sep = "")
+df_split_filename <- "E:/Learning/Springboard Intro to Data Science/capstone/CT_cleaned_split.csv"
 write.csv(file = df_split_filename, x=df_split, row.names = FALSE)
 #write.csv(file = "E:/Learning/Springboard Intro to Data Science/capstone/CT_cleaned_split.csv", x=df_split, row.names = FALSE)
 
