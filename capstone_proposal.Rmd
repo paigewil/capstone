@@ -3,8 +3,9 @@ title: 'Introduction to Data Science Capstone Proposal: <br />An Analysis of Con
   State Police Traffic Stops'
 author: "Paige Williams"
 output:
+  md_document:
+    variant: markdown_github
   html_document: default
-  keep_md: true
   word_document: default
   pdf_document: default
 bibliography: bibliography.bibtex
