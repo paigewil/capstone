@@ -4,6 +4,7 @@ title: 'Introduction to Data Science Capstone Proposal: <br />An Analysis of Con
 author: "Paige Williams"
 output:
   html_document: default
+  keep_md: true
   word_document: default
   pdf_document: default
 bibliography: bibliography.bibtex
