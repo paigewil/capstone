@@ -12,7 +12,7 @@ bibliography: bibliography.bibtex
 ---
 
 ### Problem
-In recent years, there has been a growing spotlight on the treatment (or rather, mistreatment) of citizens by police, particularly, citizens in the black community. This has caused many protests throughout the country and poor relationships with law enforcement. In an effort to police the police, this project will use machine learning to investigate what factors predict stop outcome and arrests made. And, which of those factors are demographic, contributing to the issue of police profiling.
+In recent years, there has been a growing spotlight on the interactions between police and citizens, causing many protests throughout the country and poor relationships with law enforcement. In an effort to provide an objective understanding, this project will use machine learning to investigate what factors predict stop outcome and arrests made. And, which (if any) of those factors are demographic, possibly contributing to the issue of police profiling.
 
 
 ### Client
@@ -28,14 +28,32 @@ Overall, the analysis from this project can provide police, government groups, a
 #### Cost: 
 The cost of these trainings can be expensive (\$4.5 million for the NYPD [@dimon_parascandola_2018] and \$100-\$300 per officer per day for 3 days to several weeks for another [@neuhauser_2016]) so having a clear understanding of a police department's biases will make the training more tailored and effective, ensuring the best investment.
 
+More than the cost of the training, the hours required, as enumerated above, add an additional cost in terms of time away from officers performing their regular policing duties.
+
 Additionally, the analytical techniques utilized in this project provide efficiency to the work of the governmental departments, allowing for both a wider reach to more police departments and a deeper analysis of those they investigate.
 
 ### Data
-The data I will be using comes from [The Stanford Open Policing Project](https://openpolicing.stanford.edu/) [@2017arXiv170605678P] and contains information on traffic stops throughout the United States. For this project, I will be focusing on data from Connecticut since, compared to other states, it includes more features for analysis. In total, the dataset contains 24 features across 318,669 observations (traffic stops), covering the time period from 10/1/2013 through 3/31/2015. The features are largely categorical, including information such as the driver's gender and race, county of stop, if a search was conducted, and resulting violations. The dataset has been standardized from the raw data provided by the [Connecticut Data Collaborative](http://ctrp3.ctdata.org/rawdata/) and  includes some new fields, including a unique ID for each stop, county information (name and FIP), and stop duration.
+The data I will be using comes from [The Stanford Open Policing Project](https://openpolicing.stanford.edu/) [@2017arXiv170605678P] and contains information on traffic stops throughout the United States. For this project, I will be focusing on data from Connecticut since, compared to other states, it includes more features for analysis. In total, the dataset contains 24 features across 318,669 observations (traffic stops), covering the time period from 10/1/2013 through 3/31/2015. The features are largely categorical, including information such as the driver's gender and race, county of stop, if a search was conducted, and resulting violations. The dataset has been standardized from the raw data provided by the [Connecticut Data Collaborative](http://ctrp3.ctdata.org/rawdata/) and  includes some new fields, including a unique ID for each stop, county information (name and FIPS ([Federal Information Processing Standard codes](https://en.wikipedia.org/wiki/Federal_Information_Processing_Standards)) codes, which are standard codes used by the US goverment), and stop duration.
 
 Additionally, to conduct an accurate analysis, I will need to calculate proportions of total demographic population for many of the features. I will be using a [2014 US Census Bureau dataset](https://www.census.gov/data/datasets/2016/demo/popest/counties-detail.html#tables) [@us_census_bureau] to pull the necessary denominators for demographic population proportions of gender, age, and race. 
 
 Other external datasets might be incorporated for comparison as needed depending on what the data unveils and what questions arise. 
+
+Dataset header:
+```{r, echo = FALSE, warning = FALSE, results = 'hide', message = FALSE}
+df_clean <- read.csv("E:/Learning/Springboard Intro to Data Science/capstone/CT_cleaned_edit.csv")
+library(knitr)
+library(kableExtra)
+```
+
+```{r, echo = FALSE, message = FALSE}
+dt <- head(df_clean)
+#kable(dt, "html")
+dt %>%
+  kable("html") %>%
+  kable_styling() %>% 
+  scroll_box(width = "900px", height = "400px")
+```
 
 ### Approach
 A supervised machine learning algorithm will be used to predict if a traffic stop will end in arrest and what the stop outcome will be. Additionally, time-series analysis will be conducted to investigate the influence of time/day on traffic stop outcome. 

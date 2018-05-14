@@ -126,7 +126,7 @@ $(document).ready(function () {
 
 <div id="problem" class="section level3">
 <h3>Problem</h3>
-<p>In recent years, there has been a growing spotlight on the treatment (or rather, mistreatment) of citizens by police, particularly, citizens in the black community. This has caused many protests throughout the country and poor relationships with law enforcement. In an effort to police the police, this project will use machine learning to investigate what factors predict stop outcome and arrests made. And, which of those factors are demographic, contributing to the issue of police profiling.</p>
+<p>In recent years, there has been a growing spotlight on the interactions between police and citizens, causing many protests throughout the country and poor relationships with law enforcement. In an effort to provide an objective understanding, this project will use machine learning to investigate what factors predict stop outcome and arrests made. And, which (if any) of those factors are demographic, possibly contributing to the issue of police profiling.</p>
 </div>
 <div id="client" class="section level3">
 <h3>Client</h3>
@@ -145,14 +145,725 @@ $(document).ready(function () {
 <div id="cost" class="section level4">
 <h4>Cost:</h4>
 <p>The cost of these trainings can be expensive ($4.5 million for the NYPD <span class="citation">(Dimon and Parascandola 2018)</span> and $100-$300 per officer per day for 3 days to several weeks for another <span class="citation">(Neuhauser 2016)</span>) so having a clear understanding of a police department’s biases will make the training more tailored and effective, ensuring the best investment.</p>
+<p>More than the cost of the training, the hours required, as enumerated above, add an additional cost in terms of time away from officers performing their regular policing duties.</p>
 <p>Additionally, the analytical techniques utilized in this project provide efficiency to the work of the governmental departments, allowing for both a wider reach to more police departments and a deeper analysis of those they investigate.</p>
 </div>
 </div>
 <div id="data" class="section level3">
 <h3>Data</h3>
-<p>The data I will be using comes from <a href="https://openpolicing.stanford.edu/">The Stanford Open Policing Project</a> <span class="citation">(Pierson et al. 2017)</span> and contains information on traffic stops throughout the United States. For this project, I will be focusing on data from Connecticut since, compared to other states, it includes more features for analysis. In total, the dataset contains 24 features across 318,669 observations (traffic stops), covering the time period from 10/1/2013 through 3/31/2015. The features are largely categorical, including information such as the driver’s gender and race, county of stop, if a search was conducted, and resulting violations. The dataset has been standardized from the raw data provided by the <a href="http://ctrp3.ctdata.org/rawdata/">Connecticut Data Collaborative</a> and includes some new fields, including a unique ID for each stop, county information (name and FIP), and stop duration.</p>
+<p>The data I will be using comes from <a href="https://openpolicing.stanford.edu/">The Stanford Open Policing Project</a> <span class="citation">(Pierson et al. 2017)</span> and contains information on traffic stops throughout the United States. For this project, I will be focusing on data from Connecticut since, compared to other states, it includes more features for analysis. In total, the dataset contains 24 features across 318,669 observations (traffic stops), covering the time period from 10/1/2013 through 3/31/2015. The features are largely categorical, including information such as the driver’s gender and race, county of stop, if a search was conducted, and resulting violations. The dataset has been standardized from the raw data provided by the <a href="http://ctrp3.ctdata.org/rawdata/">Connecticut Data Collaborative</a> and includes some new fields, including a unique ID for each stop, county information (name and FIPS (<a href="https://en.wikipedia.org/wiki/Federal_Information_Processing_Standards">Federal Information Processing Standard codes</a>) codes, which are standard codes used by the US goverment), and stop duration.</p>
 <p>Additionally, to conduct an accurate analysis, I will need to calculate proportions of total demographic population for many of the features. I will be using a <a href="https://www.census.gov/data/datasets/2016/demo/popest/counties-detail.html#tables">2014 US Census Bureau dataset</a> <span class="citation">(Bureau, n.d.)</span> to pull the necessary denominators for demographic population proportions of gender, age, and race.</p>
 <p>Other external datasets might be incorporated for comparison as needed depending on what the data unveils and what questions arise.</p>
+<p>Dataset head:</p>
+<div style="border: 1px solid #ddd; padding: 5px; overflow-y: scroll; height:400px; overflow-x: scroll; width:900px; ">
+<table class="table" style="margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+id
+</th>
+<th style="text-align:left;">
+state
+</th>
+<th style="text-align:left;">
+stop_date
+</th>
+<th style="text-align:left;">
+stop_time
+</th>
+<th style="text-align:left;">
+location_raw
+</th>
+<th style="text-align:left;">
+county_name
+</th>
+<th style="text-align:right;">
+county_fips
+</th>
+<th style="text-align:left;">
+fine_grained_location
+</th>
+<th style="text-align:left;">
+police_department
+</th>
+<th style="text-align:left;">
+driver_gender
+</th>
+<th style="text-align:right;">
+driver_age_raw
+</th>
+<th style="text-align:right;">
+driver_age
+</th>
+<th style="text-align:left;">
+driver_race_raw
+</th>
+<th style="text-align:left;">
+driver_race
+</th>
+<th style="text-align:left;">
+violation_raw
+</th>
+<th style="text-align:left;">
+violation
+</th>
+<th style="text-align:left;">
+search_conducted
+</th>
+<th style="text-align:left;">
+search_type_raw
+</th>
+<th style="text-align:left;">
+search_type
+</th>
+<th style="text-align:left;">
+contraband_found
+</th>
+<th style="text-align:left;">
+stop_outcome
+</th>
+<th style="text-align:left;">
+is_arrested
+</th>
+<th style="text-align:left;">
+officer_id
+</th>
+<th style="text-align:left;">
+stop_duration
+</th>
+<th style="text-align:left;">
+stop_date_time
+</th>
+<th style="text-align:left;">
+stop_date_time2
+</th>
+<th style="text-align:left;">
+violation_raw1
+</th>
+<th style="text-align:left;">
+violation_raw2
+</th>
+<th style="text-align:left;">
+violation_raw3
+</th>
+<th style="text-align:left;">
+violation_raw4
+</th>
+<th style="text-align:left;">
+violation_raw5
+</th>
+<th style="text-align:right;">
+violation_count
+</th>
+<th style="text-align:left;">
+stop_duration_fact
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+CT-2013-00001
+</td>
+<td style="text-align:left;">
+CT
+</td>
+<td style="text-align:left;">
+2013-10-01
+</td>
+<td style="text-align:left;">
+0:01
+</td>
+<td style="text-align:left;">
+westport
+</td>
+<td style="text-align:left;">
+Fairfield County
+</td>
+<td style="text-align:right;">
+9001
+</td>
+<td style="text-align:left;">
+00000 N I 95 (WESTPORT, T158) X 18 LL
+</td>
+<td style="text-align:left;">
+State Police
+</td>
+<td style="text-align:left;">
+F
+</td>
+<td style="text-align:right;">
+69
+</td>
+<td style="text-align:right;">
+69
+</td>
+<td style="text-align:left;">
+Black
+</td>
+<td style="text-align:left;">
+Black
+</td>
+<td style="text-align:left;">
+Speed Related
+</td>
+<td style="text-align:left;">
+Speeding
+</td>
+<td style="text-align:left;">
+FALSE
+</td>
+<td style="text-align:left;">
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+FALSE
+</td>
+<td style="text-align:left;">
+Ticket
+</td>
+<td style="text-align:left;">
+FALSE
+</td>
+<td style="text-align:left;">
+1000002754
+</td>
+<td style="text-align:left;">
+1-15 min
+</td>
+<td style="text-align:left;">
+10/1/2013 0:01
+</td>
+<td style="text-align:left;">
+2013-10-01 00:01:00
+</td>
+<td style="text-align:left;">
+Speed Related
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:left;">
+1-15 min
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+CT-2013-00002
+</td>
+<td style="text-align:left;">
+CT
+</td>
+<td style="text-align:left;">
+2013-10-01
+</td>
+<td style="text-align:left;">
+0:02
+</td>
+<td style="text-align:left;">
+mansfield
+</td>
+<td style="text-align:left;">
+Tolland County
+</td>
+<td style="text-align:right;">
+9013
+</td>
+<td style="text-align:left;">
+rte 195 storrs
+</td>
+<td style="text-align:left;">
+State Police
+</td>
+<td style="text-align:left;">
+M
+</td>
+<td style="text-align:right;">
+20
+</td>
+<td style="text-align:right;">
+20
+</td>
+<td style="text-align:left;">
+White
+</td>
+<td style="text-align:left;">
+White
+</td>
+<td style="text-align:left;">
+Moving Violation
+</td>
+<td style="text-align:left;">
+Moving violation
+</td>
+<td style="text-align:left;">
+FALSE
+</td>
+<td style="text-align:left;">
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+FALSE
+</td>
+<td style="text-align:left;">
+Verbal Warning
+</td>
+<td style="text-align:left;">
+FALSE
+</td>
+<td style="text-align:left;">
+1000001903
+</td>
+<td style="text-align:left;">
+1-15 min
+</td>
+<td style="text-align:left;">
+10/1/2013 0:02
+</td>
+<td style="text-align:left;">
+2013-10-01 00:02:00
+</td>
+<td style="text-align:left;">
+Moving Violation
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:left;">
+1-15 min
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+CT-2013-00003
+</td>
+<td style="text-align:left;">
+CT
+</td>
+<td style="text-align:left;">
+2013-10-01
+</td>
+<td style="text-align:left;">
+0:07
+</td>
+<td style="text-align:left;">
+franklin
+</td>
+<td style="text-align:left;">
+New London County
+</td>
+<td style="text-align:right;">
+9011
+</td>
+<td style="text-align:left;">
+Rt 32/whippoorwill
+</td>
+<td style="text-align:left;">
+State Police
+</td>
+<td style="text-align:left;">
+M
+</td>
+<td style="text-align:right;">
+34
+</td>
+<td style="text-align:right;">
+34
+</td>
+<td style="text-align:left;">
+Hispanic
+</td>
+<td style="text-align:left;">
+Hispanic
+</td>
+<td style="text-align:left;">
+Speed Related
+</td>
+<td style="text-align:left;">
+Speeding
+</td>
+<td style="text-align:left;">
+FALSE
+</td>
+<td style="text-align:left;">
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+FALSE
+</td>
+<td style="text-align:left;">
+Ticket
+</td>
+<td style="text-align:left;">
+FALSE
+</td>
+<td style="text-align:left;">
+1000002711
+</td>
+<td style="text-align:left;">
+1-15 min
+</td>
+<td style="text-align:left;">
+10/1/2013 0:07
+</td>
+<td style="text-align:left;">
+2013-10-01 00:07:00
+</td>
+<td style="text-align:left;">
+Speed Related
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:left;">
+1-15 min
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+CT-2013-00004
+</td>
+<td style="text-align:left;">
+CT
+</td>
+<td style="text-align:left;">
+2013-10-01
+</td>
+<td style="text-align:left;">
+0:10
+</td>
+<td style="text-align:left;">
+danbury
+</td>
+<td style="text-align:left;">
+Fairfield County
+</td>
+<td style="text-align:right;">
+9001
+</td>
+<td style="text-align:left;">
+I-84
+</td>
+<td style="text-align:left;">
+State Police
+</td>
+<td style="text-align:left;">
+M
+</td>
+<td style="text-align:right;">
+46
+</td>
+<td style="text-align:right;">
+46
+</td>
+<td style="text-align:left;">
+Black
+</td>
+<td style="text-align:left;">
+Black
+</td>
+<td style="text-align:left;">
+Speed Related
+</td>
+<td style="text-align:left;">
+Speeding
+</td>
+<td style="text-align:left;">
+FALSE
+</td>
+<td style="text-align:left;">
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+FALSE
+</td>
+<td style="text-align:left;">
+Written Warning
+</td>
+<td style="text-align:left;">
+FALSE
+</td>
+<td style="text-align:left;">
+113658284
+</td>
+<td style="text-align:left;">
+1-15 min
+</td>
+<td style="text-align:left;">
+10/1/2013 0:10
+</td>
+<td style="text-align:left;">
+2013-10-01 00:10:00
+</td>
+<td style="text-align:left;">
+Speed Related
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:left;">
+1-15 min
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+CT-2013-00005
+</td>
+<td style="text-align:left;">
+CT
+</td>
+<td style="text-align:left;">
+2013-10-01
+</td>
+<td style="text-align:left;">
+0:10
+</td>
+<td style="text-align:left;">
+east hartford
+</td>
+<td style="text-align:left;">
+Hartford County
+</td>
+<td style="text-align:right;">
+9003
+</td>
+<td style="text-align:left;">
+00000 W I 84 (EAST HARTFORD, T043)E.OF XT.56
+</td>
+<td style="text-align:left;">
+State Police
+</td>
+<td style="text-align:left;">
+M
+</td>
+<td style="text-align:right;">
+30
+</td>
+<td style="text-align:right;">
+30
+</td>
+<td style="text-align:left;">
+White
+</td>
+<td style="text-align:left;">
+White
+</td>
+<td style="text-align:left;">
+Speed Related
+</td>
+<td style="text-align:left;">
+Speeding
+</td>
+<td style="text-align:left;">
+FALSE
+</td>
+<td style="text-align:left;">
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+FALSE
+</td>
+<td style="text-align:left;">
+Ticket
+</td>
+<td style="text-align:left;">
+FALSE
+</td>
+<td style="text-align:left;">
+830814942
+</td>
+<td style="text-align:left;">
+1-15 min
+</td>
+<td style="text-align:left;">
+10/1/2013 0:10
+</td>
+<td style="text-align:left;">
+2013-10-01 00:10:00
+</td>
+<td style="text-align:left;">
+Speed Related
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:left;">
+1-15 min
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+CT-2013-00006
+</td>
+<td style="text-align:left;">
+CT
+</td>
+<td style="text-align:left;">
+2013-10-01
+</td>
+<td style="text-align:left;">
+0:10
+</td>
+<td style="text-align:left;">
+trumbull
+</td>
+<td style="text-align:left;">
+Fairfield County
+</td>
+<td style="text-align:right;">
+9001
+</td>
+<td style="text-align:left;">
+rt 8
+</td>
+<td style="text-align:left;">
+State Police
+</td>
+<td style="text-align:left;">
+M
+</td>
+<td style="text-align:right;">
+25
+</td>
+<td style="text-align:right;">
+25
+</td>
+<td style="text-align:left;">
+Black
+</td>
+<td style="text-align:left;">
+Black
+</td>
+<td style="text-align:left;">
+Defective Lights
+</td>
+<td style="text-align:left;">
+Lights
+</td>
+<td style="text-align:left;">
+FALSE
+</td>
+<td style="text-align:left;">
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+FALSE
+</td>
+<td style="text-align:left;">
+Verbal Warning
+</td>
+<td style="text-align:left;">
+FALSE
+</td>
+<td style="text-align:left;">
+230931989
+</td>
+<td style="text-align:left;">
+1-15 min
+</td>
+<td style="text-align:left;">
+10/1/2013 0:10
+</td>
+<td style="text-align:left;">
+2013-10-01 00:10:00
+</td>
+<td style="text-align:left;">
+Defective Lights
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:left;">
+1-15 min
+</td>
+</tr>
+</tbody>
+</table>
+</div>
 </div>
 <div id="approach" class="section level3">
 <h3>Approach</h3>
