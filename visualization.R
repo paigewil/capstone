@@ -1419,6 +1419,144 @@ ggplot(df_clean, aes(stop_duration, ..prop.., group = 1)) +
 #        arrest, which makes sense because intuitively, the arresting process will 
 #        take longer.
 
+#violation count:
+violation_counts <- setNames(data.frame(table(df_clean$violation_count, df_clean$is_arrested, exclude = NULL)), c("Violation_Count", "Arrested", "count")) 
+violation_counts_total <- violation_counts%>% group_by(Violation_Count) %>% dplyr::summarise(total_count = sum(count))
+violation_counts <- left_join(violation_counts, violation_counts_total, by = "Violation_Count")
+violation_counts <- violation_counts %>% mutate(arrests_to_pop = count/total_count)
+ggplot(violation_counts %>% filter(Arrested == TRUE), aes(Violation_Count, arrests_to_pop)) +
+  geom_bar(stat = "identity", fill = "#1E90FF") +
+  labs(title = "Arrest proportion by violation count", y = "Arrests/stops") +
+  scale_y_continuous(labels = scales::percent)
+ggsave("./EDA_images/89_arrests_to_stops_violation_count_TRUE.png")
+
+#stop outcome
+#day of week:
+so_per_day_of_week2 <- data.frame(df_clean %>% group_by(day_of_week, stop_outcome) %>% dplyr::summarise(sum_so = n()))
+so_dow_total2 <- so_per_day_of_week2 %>% group_by(day_of_week) %>% dplyr::summarise(sum_count = sum(sum_so))
+so_per_day_of_week2  <- left_join(so_per_day_of_week2 , so_dow_total2, by = "day_of_week")
+so_per_day_of_week2 <- so_per_day_of_week2 %>% mutate(so_by_DOW  = sum_so/sum_count)
+ggplot(so_per_day_of_week2, aes(stop_outcome, so_by_DOW, fill = day_of_week)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Stop Outcomes proportions for each Day of the Week", x = "Stop Outcome", y = "Stop Outcome Proportion") +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_discrete(name = "Day of Week")
+ggsave("./EDA_images/92_arrests_per_stops_day_of_week_prop.png")
+so_per_day_of_week <- data.frame(df_clean %>% group_by(day_of_week, stop_outcome) %>% dplyr::summarise(sum_so = n()))
+so_dow_total <- so_per_day_of_week %>% group_by(stop_outcome) %>% dplyr::summarise(sum_count = sum(sum_so))
+so_per_day_of_week  <- left_join(so_per_day_of_week , so_dow_total, by = "stop_outcome")
+so_per_day_of_week <- so_per_day_of_week %>% mutate(so_by_dow  = sum_so/sum_count)  
+ggplot(so_per_day_of_week %>% filter(is.na(stop_outcome) != TRUE), aes(day_of_week, so_by_dow)) +
+  geom_bar(stat = "identity", fill = "#1E90FF") +
+  facet_grid(stop_outcome ~ .) +
+  labs(title = "Proportion of Stop outcomes by Day of Week", x = "Day of Week", y = "Proportion of Stop Outcome") +
+  scale_y_continuous(labels = scales::percent)
+ggsave("./EDA_images/90_stop_outcome_by_DOW.png")
+
+#county_name
+county_by_so <- setNames(data.frame(table(df_clean$county_name, df_clean$stop_outcome, exclude = NULL)), c("County", "Stop_Outcome", "count")) 
+county_totals_so <- data.frame(county_by_so %>% group_by(County) %>% dplyr::summarise(sum_county = sum(count)))
+county_by_so <- left_join(county_by_so, county_totals_so, by = "County")
+county_by_so <- county_by_so %>% mutate(percent_of_county  = count/sum_county)
+ggplot(county_by_so %>% filter(County != "" & is.na(Stop_Outcome) != TRUE), aes(Stop_Outcome, percent_of_county, fill = County)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Proportion of Stop outcomes by County", x = "Stop Outcome", y = "Percent of stops") +
+  scale_y_continuous(labels = scales::percent)
+ggsave("./EDA_images/91_stop_outcome_by_county.png")
+
+#driver_gender
+gender_by_so <- setNames(data.frame(table(df_clean$driver_gender, df_clean$stop_outcome, exclude = NULL)), c("Gender", "Stop_Outcome", "count")) 
+gender_totals_so <- data.frame(gender_by_so %>% group_by(Gender) %>% dplyr::summarise(sum_gender = sum(count)))
+gender_by_so <- left_join(gender_by_so, gender_totals_so, by = "Gender")
+gender_by_so <- gender_by_so %>% mutate(percent_of_gender  = count/sum_gender)
+ggplot(gender_by_so %>% filter(is.na(Stop_Outcome) != TRUE), aes(Stop_Outcome, percent_of_gender, fill = Gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Proportion of Stop outcomes by Gender", x = "Stop Outcome", y = "Percent of stops") +
+  scale_y_continuous(labels = scales::percent)
+ggsave("./EDA_images/93_stop_outcome_by_gender.png")
+
+#driver_race
+race_by_so <- setNames(data.frame(table(df_clean$driver_race_raw, df_clean$stop_outcome, exclude = NULL)), c("Race", "Stop_Outcome", "count")) 
+race_totals_so <- data.frame(race_by_so %>% group_by(Race) %>% dplyr::summarise(sum_race = sum(count)))
+race_by_so <- left_join(race_by_so, race_totals_so, by = "Race")
+race_by_so <- race_by_so %>% mutate(percent_of_race  = count/sum_race)
+ggplot(race_by_so %>% filter(is.na(Stop_Outcome) != TRUE), aes(Stop_Outcome, percent_of_race, fill = Race)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Proportion of Stop outcomes by Race", x = "Stop Outcome", y = "Percent of stops") +
+  scale_y_continuous(labels = scales::percent)
+ggsave("./EDA_images/94_stop_outcome_by_race.png")
+
+#search_conducted
+sc_by_so <- setNames(data.frame(table(df_clean$search_conducted, df_clean$stop_outcome, exclude = NULL)), c("Search_Conducted", "Stop_Outcome", "count")) 
+sc_totals_so <- data.frame(sc_by_so %>% group_by(Search_Conducted) %>% dplyr::summarise(sum_sc = sum(count)))
+sc_by_so <- left_join(sc_by_so, sc_totals_so, by = "Search_Conducted")
+sc_by_so <- sc_by_so %>% mutate(percent_of_sc  = count/sum_sc)
+ggplot(sc_by_so %>% filter(is.na(Stop_Outcome) != TRUE), aes(Stop_Outcome, percent_of_sc, fill = Search_Conducted)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Proportion of Stop outcomes by Search Conducted Status", x = "Stop Outcome", y = "Percent of stops") +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_discrete(name = "Search Conducted")
+ggsave("./EDA_images/95_stop_outcome_by_sc.png")
+
+#contraband_found
+cf_by_so <- setNames(data.frame(table(df_clean$contraband_found, df_clean$stop_outcome, exclude = NULL)), c("Contraband_Found", "Stop_Outcome", "count")) 
+cf_totals_so <- data.frame(cf_by_so %>% group_by(Contraband_Found) %>% dplyr::summarise(sum_cf = sum(count)))
+cf_by_so <- left_join(cf_by_so, cf_totals_so, by = "Contraband_Found")
+cf_by_so <- cf_by_so %>% mutate(percent_of_cf  = count/sum_cf)
+ggplot(cf_by_so %>% filter(is.na(Stop_Outcome) != TRUE), aes(Stop_Outcome, percent_of_cf, fill = Contraband_Found)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Proportion of Stop outcomes by Contraband Found status", x = "Stop Outcome", y = "Percent of stops") +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_discrete(name = "Contraband Found")
+ggsave("./EDA_images/96_stop_outcome_by_cf.png")
+
+#search_type
+st_by_so <- setNames(data.frame(table(df_clean$search_type_raw, df_clean$stop_outcome, exclude = NULL)), c("Search_Type", "Stop_Outcome", "count")) 
+st_totals_so <- data.frame(st_by_so %>% group_by(Search_Type) %>% dplyr::summarise(sum_st = sum(count)))
+st_by_so <- left_join(st_by_so, st_totals_so, by = "Search_Type")
+st_by_so <- st_by_so %>% mutate(percent_of_st  = count/sum_st)
+ggplot(st_by_so %>% filter(is.na(Stop_Outcome) != TRUE & Search_Type != ""), aes(Stop_Outcome, percent_of_st, fill = Search_Type)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Proportion of Stop outcomes by Search Type", x = "Stop Outcome", y = "Percent of stops") +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_discrete(name = "Search Type")
+ggsave("./EDA_images/97_stop_outcome_by_st.png")
+
+#stop_duration
+sd_by_so <- setNames(data.frame(table(df_clean$stop_duration, df_clean$stop_outcome, exclude = NULL)), c("Stop_Duration", "Stop_Outcome", "count")) 
+sd_totals_so <- data.frame(sd_by_so %>% group_by(Stop_Duration) %>% dplyr::summarise(sum_sd = sum(count)))
+sd_by_so <- left_join(sd_by_so, sd_totals_so, by = "Stop_Duration")
+sd_by_so <- sd_by_so %>% mutate(percent_of_sd  = count/sum_sd)
+ggplot(sd_by_so %>% filter(is.na(Stop_Outcome) != TRUE), aes(Stop_Outcome, percent_of_sd, fill = Stop_Duration)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Proportion of Stop outcomes by Stop Duration", x = "Stop Outcome", y = "Percent of stops") +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_discrete(name = "Stop duration")
+ggsave("./EDA_images/98_stop_outcome_by_sd.png")
+
+#violation_count
+vc_by_so <- setNames(data.frame(table(df_clean$violation_count, df_clean$stop_outcome, exclude = NULL)), c("Violation_Count", "Stop_Outcome", "count")) 
+vc_totals_so <- data.frame(vc_by_so %>% group_by(Violation_Count) %>% dplyr::summarise(sum_vc = sum(count)))
+vc_by_so <- left_join(vc_by_so, vc_totals_so, by = "Violation_Count")
+vc_by_so <- vc_by_so %>% mutate(percent_of_vc  = count/sum_vc)
+ggplot(vc_by_so %>% filter(is.na(Stop_Outcome) != TRUE), aes(Stop_Outcome, percent_of_vc, fill = Violation_Count)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Proportion of Stop outcomes by Violation Count", x = "Stop Outcome", y = "Percent of stops") +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_discrete(name = "Violation Count")
+ggsave("./EDA_images/99_stop_outcome_by_vc.png")
+
+#driver_age
+age_by_so <- setNames(data.frame(table(df_clean$driver_age, df_clean$stop_outcome, exclude = NULL)), c("Age", "Stop_Outcome", "count")) 
+age_totals_so <- data.frame(age_by_so %>% group_by(Stop_Outcome) %>% dplyr::summarise(sum_so = sum(count)))
+age_by_so <- left_join(age_by_so, age_totals_so, by = "Stop_Outcome")
+age_by_so <- age_by_so %>% mutate(percent_of_so  = count/sum_so)
+ggplot(age_by_so %>% filter(is.na(Stop_Outcome) != TRUE & is.na(Age) != TRUE), aes(Age, percent_of_so)) +
+  geom_bar(stat = "identity", fill = "#1E90FF") +
+  facet_grid(Stop_Outcome ~ .) +
+  labs(title = "Stop Outcome by Age", y = "Proportion") +
+  scale_y_continuous(labels = scales::percent)
+ggsave("./EDA_images/100_stop_outcome_by_age.png")
 
 
 
