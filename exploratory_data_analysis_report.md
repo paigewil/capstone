@@ -63,7 +63,7 @@ df_stop_date$Stop.Date <- as.POSIXct(df_stop_date$Stop.Date, "%Y-%m-%d", tz = "A
 ```
 
 ``` r
-p1 <- ggplot(df_stop_date, aes(x = Stop.Date, y = Count, group = 1)) + 
+ggplot(df_stop_date, aes(x = Stop.Date, y = Count, group = 1)) + 
   geom_line(color = "#1E90FF") +
   geom_smooth(se = FALSE, color = "red") +
   scale_x_datetime(date_breaks = "1 month", date_labels = "%m/%Y") +
@@ -71,7 +71,7 @@ p1 <- ggplot(df_stop_date, aes(x = Stop.Date, y = Count, group = 1)) +
   labs(title = "Police stops per day (10/1/2013 - 03/31/2015)", x = "Stop Date")
 ```
 
-<br />Observations:
+![](exploratory_data_analysis_report_files/figure-markdown_github/unnamed-chunk-8-1.png) <br />Observations:
 
 -   There are a low number of stops during the winter months (02/2014 and 02/2015) and a higher number of stops during the summer months (05/2014 and 07/2014).
 
