@@ -2,9 +2,9 @@
 title: "Capstone Exploratory Data Analysis Report"
 author: "Paige Williams"
 output: 
-  html_document: default
   md_document:
     variant: markdown_github
+  html_document: default
   word_document: default
   pdf_document: default
 ---
