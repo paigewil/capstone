@@ -246,6 +246,12 @@ ggplot(df_clean %>% filter(stop_time != "0:00"), aes(stop_time)) +
   labs(title = "Stop times by count", x = "Stop Time")
 ggsave("./EDA_images/18_stop_time.png")
 
+#to see that NAs are dispersed so it's okay to ignore:
+ggplot(df_clean %>% filter(is.na(stop_time_hour) == TRUE), aes(stop_date)) + 
+  geom_bar(fill = "#1E90FF") +
+  labs(title = "NAs by stop date", x = "Stop Date")
+ggsave("./EDA_images/18.2_stop_timeNAs.png")
+
 # hour only; remove 0:00 since is a NA-filled value
 df_clean$stop_time_hour <- df_clean$stop_time
 df_clean$stop_time_hour[df_clean$stop_time_hour == "0:00"] <- NA
@@ -518,6 +524,9 @@ ggplot(table_race, aes(race, pop_prop)) +
   theme1 +
   labs(title = "Stop counts by race weighted by race population", x = "Race", y = "Weighted stop counts by race")
 ggsave("./EDA_images/35_race_weighted.png")
+rtest <- ggplot(table_race, aes(race, pop_prop)) + geom_bar(stat = "identity")
+plt_rtest <- ggplot_build(rtest)
+plt_rtest$data[[1]]
 # Note: In the Census data, Hispanic is not considered a race, it's considered an 
 #       ethnicity, so the race populations are not necessarily mutually exclusive.
 #       Based on the weights by population, Blacks and whites have the highest
@@ -567,6 +576,16 @@ ggplot(df_clean %>% filter(df_clean$search_conducted == TRUE & df_clean$search_t
   annotate("text", x = 2, y = -.025, label = "*An inventory search is a warrantless search of a lawfully \nimpounded vehicle conducted by police.", size = 2) +
   labs(title = "Stop count proportion by search type", x = "Search Type")
 ggsave("./EDA_images/39.2_search_type_bar_prop.png")
+searchtype <- df_clean %>% filter(search_conducted == TRUE) %>% group_by(search_type_raw) %>% dplyr::summarise(n = n()) %>% mutate(st_prop = n/sum(n))
+ggplot(searchtype, aes(search_type_raw, st_prop)) + 
+  geom_bar(stat = "identity", fill = "#56B4E9") +
+  annotate("text", x = 3, y = -.025, label = "*An inventory search is a warrantless search of a lawfully \nimpounded vehicle conducted by police.", size = 2) +
+  labs(title = "Stop count proportion by search type", x = "Search Type", y = "Proportion") +
+  scale_x_discrete(labels = c("NA", "Consent", "Inventory", "Other"))
+ggsave("./EDA_images/39.3_search_type_bar_prop.png")
+
+
+
 #Notes: Consent and Other are the two top search types, with inventory coming in
 #       a very far third
 
@@ -603,6 +622,15 @@ ggplot(df_clean %>% filter(is.na(stop_outcome) != TRUE), aes(stop_outcome, ..pro
   geom_bar(fill = "#56B4E9") +
   labs(title = "Stop count proportion by stop outcome", x = "Stop Outcome", y = "Stop Proportion")
 ggsave("./EDA_images/43_stop_outcome_bar_prop.png")
+stopoutcome <- df_clean %>% group_by(stop_outcome) %>% dplyr::summarise(n = n()) %>% mutate(so_prop = n/sum(n))
+ggplot(stopoutcome, aes(stop_outcome, so_prop)) + 
+  geom_bar(stat = "identity", fill = "#56B4E9") +
+  labs(title = "Stop count proportion by stop outcome", x = "Stop Outcome", y = "Stop Proportion")
+ggsave("./EDA_images/43.2_stop_outcome_bar_prop.png")
+ggplot(df_clean, aes(stop_outcome, ..prop.., group = 1)) + 
+  geom_bar(fill = "#56B4E9") +
+  labs(title = "Stop count proportion by stop outcome", x = "Stop Outcome", y = "Stop Proportion")
+ggsave("./EDA_images/43.3_stop_outcome_bar_prop.png")
 #Notes: Most stops end in a ticket (70%), with verbal warning coming in a far second.
 
 #is_arrested:
@@ -614,6 +642,10 @@ ggplot(df_clean %>% filter(is_arrested != ""), aes(is_arrested, ..prop.., group 
   geom_bar(fill = "#56B4E9") +
   labs(title = "Stop count proportion by arrested status", x = "Is Arrested", y = "Count Proportion")
 ggsave("./EDA_images/45_is_arrested_bar_prop.png")
+ggplot(df_clean, aes(is_arrested, ..prop.., group = 1)) + 
+  geom_bar(fill = "#56B4E9") +
+  labs(title = "Stop count proportion by arrested status", x = "Is Arrested", y = "Count Proportion")
+ggsave("./EDA_images/45.2_is_arrested_bar_prop.png")
 a <- ggplot(df_clean, aes(is_arrested, ..prop.., group = 1)) + geom_bar()
 plt_a <- ggplot_build(a)
 plt_a$data[[1]]
@@ -1100,27 +1132,40 @@ gender_race_by_arrest <- setNames(data.frame(table(df_clean$driver_gender, df_cl
 race_totals3 <- data.frame(gender_race_by_arrest %>% group_by(Race, Gender) %>% dplyr::summarise(sum_race_gender = sum(count)))
 gender_race_by_arrest2 <- left_join(gender_race_by_arrest, race_totals3, by = c("Race", "Gender"))
 gender_race_by_arrest2 <- gender_race_by_arrest2 %>% mutate(percent_of_race_gender  = count/sum_race_gender)
+gender_race_by_arrest2 <- gender_race_by_arrest2 %>% mutate(race_gender = paste(Race, Gender))
 ggplot(gender_race_by_arrest2, aes(Arrested, percent_of_race_gender, group = interaction(Race, Gender), fill = Gender)) + 
   geom_bar(stat = "identity", position = "dodge") +
   facet_grid(. ~ Race, labeller = as_labeller(race_label)) + 
   theme1 +
-  labs(title = "Proportion of Arrest Status for each Race's Gender", x = "Arrest Status", y = "Proporiton of Gender") +
+  labs(title = "Proportion of Arrest Status for each Race/Gender pairing", x = "Arrest Status", y = "Proportion of Race/Gender") +
   scale_y_continuous(labels = scales::percent) +
   scale_fill_discrete(labels=c("Female","Male"))
 ggsave("./EDA_images/68_race_gender_by_arrest_status.png")
+ggplot(gender_race_by_arrest2 %>% filter(Arrested == TRUE), aes(race_gender, percent_of_race_gender)) +
+  geom_bar(stat = "identity")
 #arrested == TRUE; zooming in
 ggplot(gender_race_by_arrest2 %>% filter(Arrested == TRUE), aes(Arrested, percent_of_race_gender, group = interaction(Race, Gender), fill = Gender)) + 
   geom_bar(stat = "identity", position = "dodge") +
   facet_grid(. ~ Race, labeller = as_labeller(race_label)) + 
   theme1 +
-  labs(title = "Arrest Proportions for each Race's Gender", 
+  labs(title = "Arrest Proportions for each Race/Gender pairing", 
        #subtitle = "Arrest == TRUE",
-       x = "Arrests", 
-       y = "Proporiton of Gender") +
+       x = "Race/Gender", 
+       y = "Arrests/Stops") +
   scale_y_continuous(labels = scales::percent) +
   scale_fill_discrete(labels=c("Female","Male")) +
   theme(axis.text.x=element_blank(), axis.ticks.x=element_blank())
 ggsave("./EDA_images/66_race_gender_by_arrest_status_TRUE.png")
+ggplot(gender_race_by_arrest2 %>% filter(Arrested == TRUE), aes(Gender, percent_of_race_gender, fill = Race)) + 
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Arrest Proportions for each Race/Gender pairing", 
+       subtitle = "Arrest == TRUE",
+       x = "Race/Gender", 
+       y = "Arrests/Stops") +
+  scale_y_continuous(labels = scales::percent) +
+  scale_x_discrete(labels = c("Female", "Male")) +
+  theme(axis.ticks.x=element_blank())
+ggsave("./EDA_images/66.2_race_gender_by_arrest_status_TRUE.png")
 #failed attempt-
 race_totals2 <- data.frame(gender_race_by_arrest %>% group_by(Race) %>% dplyr::summarise(sum_race = sum(count)))
 gender_race_by_arrest <- left_join(gender_race_by_arrest, race_totals2, by = "Race")
@@ -1160,6 +1205,44 @@ ggplot(age_by_arrest %>% filter(Arrested == TRUE & is.na(Age) != TRUE), aes(Age,
   labs(title = "Proportion of arrests to stops by age", y = "Arrests to stops") +
   scale_y_continuous(labels = scales::percent)
 ggsave("./EDA_images/70_arrests_to_stop_prop_age.png")
+
+age_gender_arrest <- setNames(data.frame(table(df_clean$driver_age, df_clean$driver_gender, df_clean$is_arrested, exclude = NULL)), c("Age", "Gender", "Arrested", "count")) 
+age_gender_arrest$Age <- as.integer(as.character(age_gender_arrest$Age))
+age_gender_arrest_count <- age_gender_arrest %>% group_by(Age, Gender) %>% dplyr::summarise(n = sum(count))
+age_gender_arrest <- left_join(age_gender_arrest, age_gender_arrest_count, by = c("Age", "Gender"))
+age_gender_arrest <- age_gender_arrest %>% mutate(arrest_to_stops = count/n)
+
+ggplot(age_gender_arrest %>% filter(Arrested == TRUE), aes(Age, arrest_to_stops, fill = Gender)) +
+  geom_bar(stat = "identity", position = "dodge")
+ggsave("./EDA_images/70.2_arrests_to_stop_prop_age_gender.png")
+
+df_clean$AGEGRP <- vector(mode="character", length = nrow(df_clean))
+df_clean$AGEGRP[df_clean$driver_age >= 15 & df_clean$driver_age <= 19] <- 4
+df_clean$AGEGRP[df_clean$driver_age >= 20 & df_clean$driver_age <= 24] <- 5
+df_clean$AGEGRP[df_clean$driver_age >= 25 & df_clean$driver_age <= 29] <- 6
+df_clean$AGEGRP[df_clean$driver_age >= 30 & df_clean$driver_age <= 34] <- 7
+df_clean$AGEGRP[df_clean$driver_age >= 35 & df_clean$driver_age <= 39] <- 8
+df_clean$AGEGRP[df_clean$driver_age >= 40 & df_clean$driver_age <= 44] <- 9
+df_clean$AGEGRP[df_clean$driver_age >= 45 & df_clean$driver_age <= 49] <- 10
+df_clean$AGEGRP[df_clean$driver_age >= 50 & df_clean$driver_age <= 54] <- 11
+df_clean$AGEGRP[df_clean$driver_age >= 55 & df_clean$driver_age <= 59] <- 12
+df_clean$AGEGRP[df_clean$driver_age >= 60 & df_clean$driver_age <= 64] <- 13
+df_clean$AGEGRP[df_clean$driver_age >= 65 & df_clean$driver_age <= 69] <- 14
+df_clean$AGEGRP[df_clean$driver_age >= 70 & df_clean$driver_age <= 74] <- 15
+df_clean$AGEGRP[df_clean$driver_age >= 75 & df_clean$driver_age <= 79] <- 16
+age_by_arrest2 <- setNames(data.frame(table(df_clean$AGEGRP, df_clean$is_arrested, exclude = NULL)), c("AgeGroup", "Arrested", "count")) 
+age_by_arrest2$AgeGroup <- as.integer(as.character(age_by_arrest2$AgeGroup))
+#age_counts2 <- age_by_arrest2%>% group_by(AgeGroup) %>% dplyr::summarise(age_count = n())
+age_counts2 <- data.frame(age_by_arrest2 %>% group_by(AgeGroup) %>% dplyr::summarise(age_count = sum(count)))
+age_by_arrest2 <- left_join(age_by_arrest2, age_counts2, by = "AgeGroup")
+age_by_arrest2 <- age_by_arrest2 %>% mutate(arrest_to_stops = count/age_count)
+ggplot(age_by_arrest2 %>% filter(Arrested == TRUE & is.na(AgeGroup) != TRUE), aes(AgeGroup, arrest_to_stops)) +
+  geom_bar(stat = "identity", fill = "#1E90FF") +
+  scale_x_continuous(breaks = 4:16, labels = c("15-19", "20-24", "25-29", "30-34", "35-39", "40-44", "45-49", "50-54", "55-59", "60-64", "65-69", "70-74", "75-79")) +
+  labs(title = "Arrests/Stops by age group" , x = "Age Group", y = "Arrests/Stops")
+ggsave("./EDA_images/70.3_arrests_to_stop_prop_agegrp.png")
+
+
 # Notes: The proportion of arrests to stops for each age doesn’t as closely follow 
 #        the positive skew of stops by age as I would expect. However, the 
 #        proportion of arrests to stops does decrease as age increases.
@@ -1188,6 +1271,37 @@ ggplot(county_by_arrest %>% filter(County != "" & Arrested == TRUE), aes(Arreste
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank())
 ggsave("./EDA_images/72_proportion_of_stops_that_end_in_arrest_county.png")
+
+county_by_arrest2 <- setNames(data.frame(table(df_clean$county_name, df_clean$driver_race_raw, df_clean$is_arrested, exclude = NULL)), c("County", "Race", "Arrested", "count")) 
+county_totals2 <- data.frame(county_by_arrest2 %>% group_by(County, Race) %>% dplyr::summarise(sum_county = sum(count)))
+county_by_arrest2 <- left_join(county_by_arrest2, county_totals2, by = c("County", "Race"))
+county_by_arrest2 <- county_by_arrest2 %>% mutate(percent_of_county  = count/sum_county)
+ggplot(county_by_arrest2 %>% filter(Arrested == TRUE & County != ""), aes(County, percent_of_county, fill = Race)) +
+  geom_bar(stat = "identity", position = "dodge")
+ggsave("./EDA_images/72.4_proportion_of_stops_that_end_in_arrest_county_race.png")
+
+
+census_county_gender <- census_county %>% gather("Gender", "n", 9:10) %>% select(CTYNAME, TOT_POP, Gender, n)
+census_county_gender <- census_county_gender %>% mutate(prop = n/TOT_POP)
+ggplot(census_county_gender, aes(CTYNAME, prop, fill = Gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme1
+ggsave("./EDA_images/72.2_proportion_gender_in_counties.png")
+#male/female spread of the counties aren't noticeable
+
+census_county_race <- census_county %>% dplyr::mutate(Black = BAC_MALE + BAC_FEMALE, 
+                                                      White = WAC_MALE + WAC_FEMALE,
+                                                      Hispanic = H_MALE + H_FEMALE,
+                                                      NativeAmerican = IAC_MALE + IAC_FEMALE,
+                                                      Asian = AAC_MALE + AAC_FEMALE)
+census_county_race <- census_county_race %>% select(CTYNAME, TOT_POP, Black, White, Hispanic, NativeAmerican, Asian)
+census_county_race <- census_county_race %>% gather(Race, n, 3:7) 
+census_county_race <- census_county_race %>% mutate(prop = n/TOT_POP)
+ggplot(census_county_race, aes(CTYNAME, prop, fill = Race)) +
+  geom_bar(stat = "identity", position = "dodge")
+ggplot(census_county_race, aes(Race, prop, fill = CTYNAME)) +
+  geom_bar(stat = "identity", position = "dodge")
+ggsave("./EDA_images/72.3_proportion_race_in_counties.png")
 # Notes: Those who are stopped in New London have a higher chance of being arrested,
 #        followed by Windham and Hartford.
 #        Stops in Middlesex have the smallest proportion that end in arrest.
@@ -1221,7 +1335,7 @@ arrests_only_officers <- arrests_by_officer %>% filter(Arrested == TRUE & percen
 ggplot(arrests_only_officers, aes(Officer, sum_officer, group = Officer)) +
   geom_bar(stat = "identity", position = "dodge", fill = "#1E90FF") +
   theme1 +
-  labs(title = "Count of stops/arrests for officers with 100% arrests", y = "Stop/arrest count")
+  labs(title = "Count of stops for officers with 100% arrests", y = "Stop/arrest count")
 ggsave("./EDA_images/75_arrests_by_officer_100percent.png") 
 # -> officers with 100% arrests have either 1 or 3 stops/arrests total so not concerning
 #investigating those with over 50% arrest rate
@@ -1229,7 +1343,7 @@ arrests_over50_officers <- arrests_by_officer %>% filter(Arrested == TRUE & perc
 ggplot(arrests_over50_officers, aes(Officer, sum_officer, group = Officer)) +
   geom_bar(stat = "identity", position = "dodge", fill = "#1E90FF") +
   theme1 +
-  labs(title = "Count of stops/arrests for officers with > 50% arrests", y = "Stop/arrest count")
+  labs(title = "Count of stops for officers with > 50% arrests", y = "Stop/arrest count")
 ggsave("./EDA_images/76_arrests_by_officer_50percent.png") 
 #investigate the officer with over 15 stops:
 inv_off <- arrests_by_officer %>% filter(Officer == "857851420")
@@ -1244,8 +1358,20 @@ inv_off <- arrests_by_officer %>% filter(Officer == "857851420")
 #arrests per month/year:
 ggplot(df_clean %>% filter(is_arrested == TRUE), aes(month_year)) +
   geom_bar(fill = "#1E90FF") +
+  #geom_smooth(se = FALSE, color = "red") + 
   theme1 +
   labs(title = "Arrests over time (month/year)", x = "Month/Year", y = "Count")
+ggsave("./EDA_images/77.2_arrests_over_time_mo_yr.png")
+my <- df_clean %>% filter(is_arrested == TRUE)
+month_yr_arrests <- setNames(data.frame(table(my$month_year)),c("month_year", "count"))
+ggplot(month_yr_arrests, aes(as.numeric(month_year), count)) +
+  geom_bar(stat = "identity", fill = "#1E90FF") +
+  geom_smooth(se = FALSE, color = "red") + 
+  theme1 +
+  labs(title = "Arrests over time (month/year)", x = "Month/Year", y = "Count") +
+  scale_x_continuous(breaks = as.numeric(month_yr_arrests$month_year), labels = mo_yr_label)
+ggsave("./EDA_images/77.3_arrests_over_time_mo_yr.png")
+
 ggplot(df_clean %>% filter(is_arrested == TRUE), aes(month_year, ..prop.., group = 1)) +
   geom_bar(fill = "#1E90FF") +
   theme1 +
@@ -1285,6 +1411,25 @@ ggplot(arrests_per_day %>% filter(is_arrested == TRUE), aes(day_of_month, arrest
 ggsave("./EDA_images/79_arrests_per_stops_day_of_month_prop.png")
 ggplot(arrests_per_day %>% filter(is_arrested == TRUE), aes(day_of_month, arrests_weighted)) +
   geom_bar(stat = "identity")
+
+ggplot(arrests_per_day %>% filter(is_arrested == TRUE), aes(as.numeric(day_of_month), arrests_per_stop)) +
+  geom_bar(stat = "identity", fill = "#1E90FF") + 
+  geom_smooth(se = FALSE, color = "red") + 
+  labs(title = "% of stops that end in arrest by day of month", x = "Day of Month", y = "Arrests/stops") +
+  scale_y_continuous(labels = scales::percent) +
+  scale_x_continuous(breaks = as.numeric(arrests_per_day$day_of_month), labels = as.character(arrests_per_day$day_of_month))
+ggsave("./EDA_images/79.2_arrests_per_stops_day_of_month_prop_w_LOESS.png")
+
+#my <- df_clean %>% filter(is_arrested == TRUE)
+day_arrests <- setNames(data.frame(table(my$day_of_month)),c("day_of_month", "count"))
+ggplot(day_arrests, aes(as.numeric(day_of_month), count)) +
+  geom_bar(stat = "identity", fill = "#1E90FF") +
+  geom_smooth(se = FALSE, color = "red") + 
+  theme1 +
+  labs(title = "Arrests over day of month", x = "Day of Month", y = "Count") +
+  scale_x_continuous(breaks = as.numeric(day_arrests$day_of_month), labels = as.character(day_arrests$day_of_month))
+ggsave("./EDA_images/79.3_arrests_over_time_day.png")
+
 # -> similar trend/shape to arrests_per_stop
 #Notes: The beginning and middle of the month have a high ratio of stops that end 
 #       in arrests (days 1 and 14).
@@ -1306,6 +1451,17 @@ ggsave("./EDA_images/80_arrests_per_stops_day_of_week_prop.png")
 
 #Weighted:
 df_clean_arrests <- df_clean %>% filter(is_arrested == TRUE)
+
+#time:
+arrest_time <- setNames(data.frame(table(df_clean$stop_time_hour, df_clean$is_arrested, exclude = NULL)), c("Hour", "Arrested", "count")) 
+arrest_time_totals <- data.frame(arrest_time %>% group_by(Hour) %>% dplyr::summarise(sum_stops = sum(count)))
+arrest_time <- left_join(arrest_time, arrest_time_totals, by = "Hour")
+arrest_time <- arrest_time %>% mutate(arrests_per_stops  = count/sum_stops)
+ggplot(arrest_time %>% filter(Arrested == TRUE & is.na(Hour) != TRUE), aes(Hour, arrests_per_stops)) +
+  geom_bar(stat = "identity", fill = "#1E90FF") +
+  labs(title = "Arrests/stop by hour")
+ggsave("./EDA_images/79.4_arrests_by_hour.png")
+
 
 #gender:
 gender_arrests <- df_clean_arrests %>% group_by(driver_gender) %>% dplyr::summarise(gender_arrested_count = n())
@@ -1335,7 +1491,7 @@ ggsave("./EDA_images/71_race_arrests_pop_weighted.png")
 #       This coincides with the race by arrest status analysis that found Hispanics 
 #       have the highest proportion of arrests per stops.
 
-#arrests by stop outcome:
+#arrests by search conducted:
 searches_conducted <- setNames(data.frame(table(df_clean$search_conducted, df_clean$is_arrested, exclude = NULL)), c("Search_Conducted", "Arrested", "count")) 
 searches_total <- searches_conducted %>% group_by(Search_Conducted) %>% dplyr::summarise(total_count = sum(count))
 searches_conducted <- left_join(searches_conducted, searches_total, by = "Search_Conducted")
@@ -1350,13 +1506,50 @@ ggplot(searches_conducted %>% filter(Arrested == TRUE), aes(Search_Conducted, ar
   labs(title = "Ratio of stops that end in arrest by search conducted", x = "Search Conducted", y = "Arrests/Stops") +
   scale_y_continuous(labels = scales::percent)
 ggsave("./EDA_images/82_arrests_to_stops_search_conducted_TRUE.png")
+
+searches_conducted2 <- setNames(data.frame(table(df_clean$search_conducted, df_clean$driver_gender, df_clean$is_arrested, exclude = NULL)), c("Search_Conducted", "Gender", "Arrested", "count")) 
+searches_total2 <- searches_conducted2 %>% group_by(Search_Conducted, Gender) %>% dplyr::summarise(total_count = sum(count))
+searches_conducted2 <- left_join(searches_conducted2, searches_total2, by = c("Search_Conducted", "Gender"))
+searches_conducted2 <- searches_conducted2 %>% mutate(arrests_to_pop = count/total_count)
+ggplot(searches_conducted2, aes(Gender, arrests_to_pop, fill = Arrested)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(. ~ Search_Conducted)
+
+searches_conducted3 <- setNames(data.frame(table(df_clean$search_conducted, df_clean$driver_race_raw, df_clean$is_arrested, exclude = NULL)), c("Search_Conducted", "Race", "Arrested", "count")) 
+searches_total3 <- searches_conducted3 %>% group_by(Search_Conducted, Race) %>% dplyr::summarise(total_count = sum(count))
+searches_conducted3 <- left_join(searches_conducted3, searches_total3, by = c("Search_Conducted", "Race"))
+searches_conducted3 <- searches_conducted3 %>% mutate(arrests_to_pop = count/total_count)
+ggplot(searches_conducted3, aes(Race, arrests_to_pop, fill = Arrested)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(. ~ Search_Conducted) +
+  labs(title = "Arrests/Stops for Searches Conducted by Race", x = "Search Conducted by Race", y = "Arrests/Stops") +
+  theme1
+ggsave("./EDA_images/82.2_arrests_to_stops_search_conducted_byrace.png")
+
+sc_race <- setNames(data.frame(table(df_clean$search_conducted, df_clean$driver_race_raw, exclude = NULL)), c("Search_Conducted", "Race", "count")) 
+sc_race_total <- sc_race %>% group_by(Search_Conducted) %>% dplyr::summarise(total_count = sum(count))
+sc_race <- left_join(sc_race, sc_race_total, by = c("Search_Conducted"))
+sc_race <- sc_race %>% mutate(prop = count/total_count)
+ggplot(sc_race, aes(Search_Conducted, prop, fill = Race)) +
+  geom_bar(stat = "identity", position = "dodge")
+
+sc_race2 <- setNames(data.frame(table(df_clean$search_conducted, df_clean$driver_race_raw, exclude = NULL)), c("Search_Conducted", "Race", "count")) 
+sc_race_total2 <- sc_race2 %>% group_by(Race) %>% dplyr::summarise(total_count = sum(count))
+sc_race2 <- left_join(sc_race2, sc_race_total2, by = "Race")
+sc_race2 <- sc_race2 %>% mutate(prop = count/total_count)
+ggplot(sc_race2, aes(Race, prop, fill = Search_Conducted)) +
+  geom_bar(stat = "identity", position = "dodge")
+
+
 # Notes: Most stops don’t end in arrest, regardless of whether a search was 
 #        conducted. However, if a search was conducted, there is 14.69 times more of 
 #        a chance the stop will end in an arrest than if there wasn’t a search 
 #        conducted
 
 #search type by arrests:
-search_types <- setNames(data.frame(table(df_clean$search_type, df_clean$is_arrested, exclude = NULL)), c("Search_Type", "Arrested", "count")) 
+#only looking for stops where search_conducted == TRUE
+st_df <- df_clean %>% filter(search_conducted == TRUE)
+search_types <- setNames(data.frame(table(st_df$search_type, st_df$is_arrested, exclude = NULL)), c("Search_Type", "Arrested", "count")) 
 search_types_total <- search_types %>% group_by(Search_Type) %>% dplyr::summarise(total_count = sum(count))
 search_types <- left_join(search_types, search_types_total, by = "Search_Type")
 search_types <- search_types %>% mutate(arrests_to_pop = count/total_count)
@@ -1370,12 +1563,32 @@ ggplot(search_types %>% filter(Arrested == TRUE), aes(Search_Type, arrests_to_po
   labs(title = "Ratio of arrests/stops by search type", x = "Search Type", y = "Arrests/Stops") +
   scale_y_continuous(labels = scales::percent)
 ggsave("./EDA_images/84_arrests_to_stops_search_type_TRUE.png")
+
+search_types2 <- setNames(data.frame(table(st_df$search_type, st_df$contraband_found, st_df$is_arrested, exclude = NULL)), c("Search_Type", "Contraband_Found", "Arrested", "count")) 
+search_types_total2 <- search_types2 %>% group_by(Search_Type, Contraband_Found) %>% dplyr::summarise(total_count = sum(count))
+search_types2 <- left_join(search_types2, search_types_total2, by = c("Search_Type", "Contraband_Found"))
+search_types2 <- search_types2 %>% mutate(arrests_to_pop = count/total_count)
+ggplot(search_types2, aes(Contraband_Found, arrests_to_pop, fill = Arrested)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(. ~ Search_Type)
+ggsave("./EDA_images/84.2_arrests_to_stops_search_type_contraband.png")
+
+search_types3 <- setNames(data.frame(table(st_df$search_type, st_df$contraband_found, st_df$driver_race_raw,st_df$is_arrested, exclude = NULL)), c("Search_Type", "Contraband_Found", "Race","Arrested", "count")) 
+search_types_total3 <- search_types3 %>% group_by(Search_Type, Contraband_Found,Race) %>% dplyr::summarise(total_count = sum(count))
+search_types3 <- left_join(search_types3, search_types_total3, by = c("Search_Type", "Contraband_Found", "Race"))
+search_types3 <- search_types3 %>% mutate(arrests_to_pop = count/total_count)
+ggplot(search_types3, aes(Contraband_Found, arrests_to_pop, fill = Arrested)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(Race ~ Search_Type)
+ggsave("./EDA_images/84.3_arrests_to_stops_search_type_contraband_race.png")
+
+
 #Notes: Most of the inventory searches ended in arrest while all other search types 
 #       mostly did not end in arrest
 #       Additionally, inventory search types have the highest arrests/stops ratios
 
 #contraband found arrest status distribution:
-contraband <- setNames(data.frame(table(df_clean$contraband_found, df_clean$is_arrested, exclude = NULL)), c("Contraband", "Arrested", "count")) 
+contraband <- setNames(data.frame(table(st_df$contraband_found, st_df$is_arrested, exclude = NULL)), c("Contraband", "Arrested", "count")) 
 contraband_total <- contraband %>% group_by(Contraband) %>% dplyr::summarise(total_count = sum(count))
 contraband <- left_join(contraband, contraband_total, by = "Contraband")
 contraband <- contraband %>% mutate(arrests_to_pop = count/total_count)
@@ -1384,6 +1597,26 @@ ggplot(contraband, aes(Contraband, arrests_to_pop, fill = Arrested)) +
   labs(title = "Arrest Status distribution per contraband found status", y = "Arrests/stops") +
   scale_y_continuous(labels = scales::percent)
 ggsave("./EDA_images/85_arrests_to_stops_contraband.png")
+
+contraband2 <- setNames(data.frame(table(st_df$contraband_found, st_df$driver_race_raw, st_df$is_arrested, exclude = NULL)), c("Contraband", "Race","Arrested", "count")) 
+contraband_total2 <- contraband2 %>% group_by(Contraband, Race) %>% dplyr::summarise(total_count = sum(count))
+contraband2 <- left_join(contraband2, contraband_total2, by = c("Contraband","Race"))
+contraband2 <- contraband2 %>% mutate(arrests_to_pop = count/total_count)
+ggplot(contraband2, aes(Race, arrests_to_pop, fill = Arrested)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(. ~ Contraband)
+ggsave("./EDA_images/85.2_arrests_to_stops_contraband_race.png")
+
+contraband3 <- setNames(data.frame(table(st_df$contraband_found, st_df$driver_gender, st_df$is_arrested, exclude = NULL)), c("Contraband", "Gender","Arrested", "count")) 
+contraband_total3 <- contraband3 %>% group_by(Contraband, Gender) %>% dplyr::summarise(total_count = sum(count))
+contraband3 <- left_join(contraband3, contraband_total3, by = c("Contraband","Gender"))
+contraband3 <- contraband3 %>% mutate(arrests_to_pop = count/total_count)
+ggplot(contraband3, aes(Gender, arrests_to_pop, fill = Arrested)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(. ~ Contraband)
+ggsave("./EDA_images/85.3_arrests_to_stops_contraband_gender.png")
+
+
 ggplot(contraband %>% filter(Arrested == TRUE), aes(Contraband, arrests_to_pop)) +
   geom_bar(stat = "identity", fill = "#1E90FF") +
   labs(title = "Arrests per contraband found status", y = "Arrests/stops") +
@@ -1409,7 +1642,29 @@ ggplot(stop_durations %>% filter(Arrested == TRUE), aes(Stop_Duration, arrests_t
 ggsave("./EDA_images/88_arrests_to_stops_stop_duration_TRUE.png")
 # Investigating stop duration spread of stops and arrests- 
 ggplot(df_clean %>% filter(is_arrested == TRUE), aes(stop_duration, ..prop.., group = 1)) +
-  geom_bar()
+  geom_bar(fill = "#1E90FF") +
+  labs(title = "Proportion of stop duration for arrests")
+ggsave("./EDA_images/88.2_arrests_stop_duration.png")
+
+stop_durations2 <- setNames(data.frame(table(df_clean$stop_duration, df_clean$search_conducted, df_clean$is_arrested, exclude = NULL)), c("Stop_Duration", "Search_Conducted", "Arrested", "count")) 
+stop_durations_total2 <- stop_durations2 %>% group_by(Stop_Duration, Search_Conducted) %>% dplyr::summarise(total_count = sum(count))
+stop_durations2 <- left_join(stop_durations2, stop_durations_total2, by = c("Stop_Duration", "Search_Conducted"))
+stop_durations2 <- stop_durations2 %>% mutate(arrests_to_pop = count/total_count)
+ggplot(stop_durations2, aes(Search_Conducted, arrests_to_pop, fill = Arrested)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(. ~ Stop_Duration)
+ggsave("./EDA_images/88.3_arrests_stop_duration_search_conducted.png")
+
+sd_df <- df_clean %>% filter(search_conducted == TRUE)
+stop_durations3 <- setNames(data.frame(table(sd_df$stop_duration, sd_df$contraband_found, sd_df$is_arrested, exclude = NULL)), c("Stop_Duration", "Contraband_Found", "Arrested", "count")) 
+stop_durations_total3 <- stop_durations3 %>% group_by(Stop_Duration, Contraband_Found) %>% dplyr::summarise(total_count = sum(count))
+stop_durations3 <- left_join(stop_durations3, stop_durations_total3, by = c("Stop_Duration", "Contraband_Found"))
+stop_durations3 <- stop_durations3 %>% mutate(arrests_to_pop = count/total_count)
+ggplot(stop_durations3, aes(Contraband_Found, arrests_to_pop, fill = Arrested)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(. ~ Stop_Duration)
+ggsave("./EDA_images/88.4_arrests_stop_duration_search_conductedTRUE.png")
+
 ggplot(df_clean, aes(stop_duration, ..prop.., group = 1)) +
   geom_bar()
 #Surprisingly, most stops and arrests take from 1-15 min.
@@ -1429,6 +1684,29 @@ ggplot(violation_counts %>% filter(Arrested == TRUE), aes(Violation_Count, arres
   labs(title = "Arrest proportion by violation count", y = "Arrests/stops") +
   scale_y_continuous(labels = scales::percent)
 ggsave("./EDA_images/89_arrests_to_stops_violation_count_TRUE.png")
+
+ggplot(violation_counts, aes(Violation_Count, arrests_to_pop, fill = Arrested)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Arrest proportion by violation count", y = "Arrests/stops") +
+  scale_y_continuous(labels = scales::percent)
+ggsave("./EDA_images/89.2_arrests_to_stops_violation_count.png")
+
+df_split3 <- df_split %>% gather("violation_new", "n", 'violation_raw_Cell.Phone':'violation_raw_Window.Tint')
+df_split3 <- df_split3 %>% filter(n != 0)
+violations <- setNames(data.frame(table(df_split3$violation_new, df_split3$is_arrested, exclude = NULL)), c("Violation", "Arrested", "count")) 
+violations_total <- violations%>% group_by(Violation) %>% dplyr::summarise(total_count = sum(count))
+violations <- left_join(violations, violations_total, by = "Violation")
+violations <- violations %>% mutate(arrests_to_pop = count/total_count)
+ggplot(violations, aes(Violation, arrests_to_pop, fill = Arrested)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme1
+ggsave("./EDA_images/89.3_arrests_to_stops_violation.png")
+
+ggplot(violations %>% filter(Arrested == TRUE), aes(Violation, arrests_to_pop)) +
+  geom_bar(stat = "identity", position = "dodge", fill = "#56B4E9") +
+  theme1
+ggsave("./EDA_images/89.4_arrests_to_stops_violation_arrestTRUE.png")
+
 
 #stop outcome
 #day of week:
