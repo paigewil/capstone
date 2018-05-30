@@ -1196,6 +1196,13 @@ age_by_arrest <- age_by_arrest %>% mutate(arrest_to_stops = count/age_count)
 ggplot(age_by_arrest, aes(Age, arrest_to_stops, fill = Arrested)) +
   geom_bar(stat = "identity", position = "Dodge")
 
+ggplot(age_by_arrest %>% filter(Arrested == TRUE & is.na(Age) != TRUE), aes(Age, count)) +
+  geom_bar(stat = "identity", position = "Dodge", fill = "#1E90FF") + 
+  scale_x_continuous(breaks = as.integer(x_breaks), labels = as.character(x_breaks)) +
+  labs(title = "Count of arrests by age")
+ggsave("./EDA_images/70.4_arrests_by_age.png")
+
+  
 #arrests/stop by age:
 #since a lot of groups for age, focusing on arrest = TRUE
 ggplot(age_by_arrest %>% filter(Arrested == TRUE & is.na(Age) != TRUE), aes(Age, arrest_to_stops)) +
@@ -1452,6 +1459,7 @@ ggsave("./EDA_images/80_arrests_per_stops_day_of_week_prop.png")
 #Weighted:
 df_clean_arrests <- df_clean %>% filter(is_arrested == TRUE)
 
+
 #time:
 arrest_time <- setNames(data.frame(table(df_clean$stop_time_hour, df_clean$is_arrested, exclude = NULL)), c("Hour", "Arrested", "count")) 
 arrest_time_totals <- data.frame(arrest_time %>% group_by(Hour) %>% dplyr::summarise(sum_stops = sum(count)))
@@ -1525,6 +1533,18 @@ ggplot(searches_conducted3, aes(Race, arrests_to_pop, fill = Arrested)) +
   labs(title = "Arrests/Stops for Searches Conducted by Race", x = "Search Conducted by Race", y = "Arrests/Stops") +
   theme1
 ggsave("./EDA_images/82.2_arrests_to_stops_search_conducted_byrace.png")
+ggplot(searches_conducted3 %>% filter(Arrested == TRUE & Search_Conducted == FALSE), aes(Race, arrests_to_pop, fill = Arrested)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(. ~ Search_Conducted) +
+  labs(title = "Arrests/Stops for Searches Conducted by Race", x = "Search Conducted by Race", y = "Arrests/Stops") +
+  theme1
+ggplot(searches_conducted3 %>% filter(Arrested == TRUE), aes(Race, arrests_to_pop, fill = Arrested)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(. ~ Search_Conducted) +
+  labs(title = "Arrests/Stops for Searches Conducted by Race", x = "Search Conducted by Race", y = "Arrests/Stops") +
+  theme1
+ggsave("./EDA_images/82.3_arrests_to_stops_search_conducted_byrace.png")
+
 
 sc_race <- setNames(data.frame(table(df_clean$search_conducted, df_clean$driver_race_raw, exclude = NULL)), c("Search_Conducted", "Race", "count")) 
 sc_race_total <- sc_race %>% group_by(Search_Conducted) %>% dplyr::summarise(total_count = sum(count))
@@ -1655,6 +1675,10 @@ ggplot(stop_durations2, aes(Search_Conducted, arrests_to_pop, fill = Arrested)) 
   facet_grid(. ~ Stop_Duration)
 ggsave("./EDA_images/88.3_arrests_stop_duration_search_conducted.png")
 
+ggplot(stop_durations2, aes(Stop_Duration, arrests_to_pop, fill = Arrested)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(. ~ Search_Conducted)
+
 sd_df <- df_clean %>% filter(search_conducted == TRUE)
 stop_durations3 <- setNames(data.frame(table(sd_df$stop_duration, sd_df$contraband_found, sd_df$is_arrested, exclude = NULL)), c("Stop_Duration", "Contraband_Found", "Arrested", "count")) 
 stop_durations_total3 <- stop_durations3 %>% group_by(Stop_Duration, Contraband_Found) %>% dplyr::summarise(total_count = sum(count))
@@ -1707,6 +1731,51 @@ ggplot(violations %>% filter(Arrested == TRUE), aes(Violation, arrests_to_pop)) 
   theme1
 ggsave("./EDA_images/89.4_arrests_to_stops_violation_arrestTRUE.png")
 
+df_split3$stop_date <- as.POSIXct(df_split3$stop_date, "%Y-%m-%d", tz = "America/New_York")
+df_split3$day_of_week <- weekdays(df_split3$stop_date)
+df_split3$day_of_week <- factor(df_split3$day_of_week, levels = c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"))
+ggplot(df_split3, aes(violation_new, ..count.., fill = day_of_week)) +
+  geom_bar(position = "dodge") +
+  theme1
+
+ggplot(df_split3, aes(day_of_week, ..count.., fill = violation_new)) +
+  geom_bar(position = "dodge") +
+  theme1
+
+ggplot(df_split3 %>% filter(violation_new %in% c("violation_raw_Suspended.License", "violation_raw_Moving.Violation", "violation_raw_Other", "violation_raw_Other.Error", "violation_raw_Traffic.Control.Signal")), aes(day_of_week, ..count.., fill = violation_new)) +
+  geom_bar() +
+  theme1
+
+ggplot(df_split3 %>% filter(violation_new %in% c("violation_raw_Suspended.License", "violation_raw_Moving.Violation", "violation_raw_Other", "violation_raw_Other.Error", "violation_raw_Traffic.Control.Signal")), aes(violation_new, ..count.., fill = day_of_week)) +
+  geom_bar(position = "dodge") +
+  theme1
+ggsave("./EDA_images/89.5_violations_over_time.png")
+
+df_split3$month_year <- format(df_split3$stop_date, "%m-%Y")
+df_split3$month_year <- factor(df_split3$month_year,
+                              ordered = TRUE,
+                              levels = mo_yr_label)
+ggplot(df_split3, aes(violation_new, ..count.., fill = month_year)) +
+  geom_bar(position = "dodge") +
+  theme1
+
+ggplot(df_split3 %>% filter(violation_new %in% c("violation_raw_Suspended.License", "violation_raw_Moving.Violation", "violation_raw_Other", "violation_raw_Other.Error", "violation_raw_Traffic.Control.Signal")), aes(violation_new, ..count.., fill = month_year)) +
+  geom_bar(position = "dodge") +
+  theme1
+
+ggplot(df_split3 %>% filter(violation_new %in% c("violation_raw_Suspended.License", "violation_raw_Moving.Violation", "violation_raw_Other", "violation_raw_Other.Error", "violation_raw_Traffic.Control.Signal")), aes(month_year, ..count..)) +
+  geom_bar(fill = "#1E90FF") +
+  facet_grid(violation_new ~ .) +
+  theme1
+ggsave("./EDA_images/89.6_violations_over_time.png")
+
+
+
+
+
+
+
+
 
 #stop outcome
 #day of week:
@@ -1730,6 +1799,90 @@ ggplot(so_per_day_of_week %>% filter(is.na(stop_outcome) != TRUE), aes(day_of_we
   labs(title = "Proportion of Stop outcomes by Day of Week", x = "Day of Week", y = "Proportion of Stop Outcome") +
   scale_y_continuous(labels = scales::percent)
 ggsave("./EDA_images/90_stop_outcome_by_DOW.png")
+
+# ggplot(so_per_day_of_week %>% filter(is.na(stop_outcome) != TRUE), aes(day_of_week, so_by_dow, fill = stop_outcome)) +
+#   geom_bar(stat = "identity", position = "dodge") +
+#   #facet_grid(stop_outcome ~ .) +
+#   labs(title = "Proportion of Stop outcomes by Day of Week", x = "Day of Week", y = "Proportion of Stop Outcome") +
+#   scale_y_continuous(labels = scales::percent)
+
+
+ggplot(so_per_day_of_week %>% filter(is.na(stop_outcome) != TRUE), aes(day_of_week, so_by_dow)) +
+  geom_bar(stat = "identity", fill = "#1E90FF") +
+  facet_grid(. ~ stop_outcome) +
+  labs(title = "Proportion of Stop outcomes by Day of Week", x = "Day of Week", y = "Proportion of Stop Outcome") +
+  scale_y_continuous(labels = scales::percent) +
+  theme1
+ggsave("./EDA_images/90.2_stop_outcome_by_DOW.png")
+
+so_dow <- data.frame(df_clean %>% group_by(day_of_week, stop_outcome) %>% dplyr::summarise(sum_so = n()))
+so_dow_total2 <- so_dow %>% group_by(day_of_week) %>% dplyr::summarise(sum_count = sum(sum_so))
+so_dow  <- left_join(so_dow , so_dow_total2, by = "day_of_week")
+so_dow <- so_dow %>% mutate(so_by_dow  = sum_so/sum_count)  
+ggplot(so_dow %>% filter(is.na(stop_outcome) != TRUE), aes(stop_outcome, so_by_dow)) +
+  geom_bar(stat = "identity", fill = "#1E90FF") +
+  facet_grid(. ~ day_of_week) +
+  labs(title = "Proportion of Stop outcomes by Day of Week", x = "Day of Week", y = "Proportion of Stop Outcome") +
+  scale_y_continuous(labels = scales::percent) +
+  theme1
+
+ggplot(so_dow %>% filter(is.na(stop_outcome) != TRUE), aes(stop_outcome, so_by_dow, fill = day_of_week)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  #facet_grid(. ~ day_of_week) +
+  labs(title = "Proportion of Stop outcomes by Day of Week", x = "Day of Week", y = "Proportion of Stop Outcome") +
+  scale_y_continuous(labels = scales::percent) +
+  theme1
+ggsave("./EDA_images/90.3_stop_outcome_by_DOW.png")
+
+
+so_dow2 <- data.frame(df_clean %>% group_by(day_of_week, stop_outcome) %>% dplyr::summarise(sum_so = n()))
+so_dow_total3 <- so_dow2 %>% group_by(day_of_week, stop_outcome) %>% dplyr::summarise(sum_count = sum(sum_so))
+so_dow2  <- left_join(so_dow2 , so_dow_total3, by = c("day_of_week", "stop_outcome"))
+tot <- sum(so_dow2$sum_so)
+so_dow2 <- so_dow2 %>% mutate(so_by_dow  = sum_so/tot)  
+ggplot(so_dow2 %>% filter(is.na(stop_outcome) != TRUE & stop_outcome != "Ticket"), aes(day_of_week, so_by_dow, fill = stop_outcome)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  #facet_grid(stop_outcome ~ .) +
+  labs(title = "Proportion of Stop outcomes by Day of Week", x = "Day of Week", y = "Proportion of Stop Outcome") +
+  scale_y_continuous(labels = scales::percent)
+
+
+#month
+so_mo <- data.frame(df_clean %>% group_by(stop_month, stop_outcome) %>% dplyr::summarise(sum_so = n()))
+so_mo_total <- so_mo %>% group_by(stop_month) %>% dplyr::summarise(sum_count = sum(sum_so))
+so_mo  <- left_join(so_mo, so_mo_total, by = "stop_month")
+#tot <- sum(so_dow2$sum_so)
+so_mo <- so_mo %>% mutate(so_by_mo  = sum_so/sum_count)  
+ggplot(so_mo %>% filter(is.na(stop_outcome) != TRUE), aes(stop_month, so_by_mo)) +
+  geom_bar(stat= "identity", fill = "#1E90FF") +
+  facet_grid(. ~ stop_outcome) +
+  labs(title = "Stop Outcome by month")
+ggsave("./EDA_images/90.5_so_by_month.png")
+
+
+
+#time (hour)
+so_time <- setNames(data.frame(table(df_clean$stop_time_hour, df_clean$stop_outcome, exclude = NULL)), c("Hour", "StopOutcome", "count")) 
+so_time_totals <- data.frame(so_time %>% group_by(Hour) %>% dplyr::summarise(sum_stops = sum(count)))
+so_time <- left_join(so_time, so_time_totals, by = "Hour")
+so_time <- so_time %>% mutate(so_per_stops  = count/sum_stops)
+ggplot(so_time %>% filter(is.na(Hour) != TRUE & is.na(StopOutcome) != TRUE), aes(Hour, so_per_stops)) +
+  geom_bar(stat = "identity", fill = "#1E90FF") +
+  facet_grid(. ~ StopOutcome) +
+  labs(title = "Stop Outcome by hour")
+ggsave("./EDA_images/90.1_so_by_hour.png")
+
+
+#day of month
+so_dom <- setNames(data.frame(table(df_clean$day_of_month, df_clean$stop_outcome, exclude = NULL)), c("dayofmonth", "StopOutcome", "count")) 
+so_dom_totals <- data.frame(so_dom %>% group_by(dayofmonth) %>% dplyr::summarise(sum_stops = sum(count)))
+so_dom <- left_join(so_dom, so_dom_totals, by = "dayofmonth")
+so_dom <- so_dom %>% mutate(so_per_stops  = count/sum_stops)
+ggplot(so_dom %>% filter(is.na(StopOutcome) != TRUE), aes(dayofmonth, so_per_stops)) +
+  geom_bar(stat = "identity", fill = "#1E90FF") +
+  facet_grid(. ~ StopOutcome) +
+  labs(title = "Stop Outcome by day of month")
+ggsave("./EDA_images/90.4_so_by_dom.png")
 
 #county_name
 county_by_so <- setNames(data.frame(table(df_clean$county_name, df_clean$stop_outcome, exclude = NULL)), c("County", "Stop_Outcome", "count")) 
@@ -1777,28 +1930,46 @@ ggplot(sc_by_so %>% filter(is.na(Stop_Outcome) != TRUE), aes(Stop_Outcome, perce
 ggsave("./EDA_images/95_stop_outcome_by_sc.png")
 
 #contraband_found
+st_df
 cf_by_so <- setNames(data.frame(table(df_clean$contraband_found, df_clean$stop_outcome, exclude = NULL)), c("Contraband_Found", "Stop_Outcome", "count")) 
 cf_totals_so <- data.frame(cf_by_so %>% group_by(Contraband_Found) %>% dplyr::summarise(sum_cf = sum(count)))
 cf_by_so <- left_join(cf_by_so, cf_totals_so, by = "Contraband_Found")
 cf_by_so <- cf_by_so %>% mutate(percent_of_cf  = count/sum_cf)
-ggplot(cf_by_so %>% filter(is.na(Stop_Outcome) != TRUE), aes(Stop_Outcome, percent_of_cf, fill = Contraband_Found)) +
+
+cf_by_so2 <- setNames(data.frame(table(st_df$contraband_found, st_df$stop_outcome, exclude = NULL)), c("Contraband_Found", "Stop_Outcome", "count")) 
+cf_totals_so2 <- data.frame(cf_by_so2 %>% group_by(Contraband_Found) %>% dplyr::summarise(sum_cf = sum(count)))
+cf_by_so2 <- left_join(cf_by_so2, cf_totals_so2, by = "Contraband_Found")
+cf_by_so2 <- cf_by_so2 %>% mutate(percent_of_cf  = count/sum_cf)
+ggplot(cf_by_so2 %>% filter(is.na(Stop_Outcome) != TRUE), aes(Stop_Outcome, percent_of_cf, fill = Contraband_Found)) +
   geom_bar(stat = "identity", position = "dodge") +
   labs(title = "Proportion of Stop outcomes by Contraband Found status", x = "Stop Outcome", y = "Percent of stops") +
   scale_y_continuous(labels = scales::percent) +
   scale_fill_discrete(name = "Contraband Found")
-ggsave("./EDA_images/96_stop_outcome_by_cf.png")
+ggsave("./EDA_images/96.2_stop_outcome_by_cf.png")
 
 #search_type
 st_by_so <- setNames(data.frame(table(df_clean$search_type_raw, df_clean$stop_outcome, exclude = NULL)), c("Search_Type", "Stop_Outcome", "count")) 
 st_totals_so <- data.frame(st_by_so %>% group_by(Search_Type) %>% dplyr::summarise(sum_st = sum(count)))
 st_by_so <- left_join(st_by_so, st_totals_so, by = "Search_Type")
 st_by_so <- st_by_so %>% mutate(percent_of_st  = count/sum_st)
+
+st_by_so2 <- setNames(data.frame(table(st_df$search_type_raw, st_df$stop_outcome, exclude = NULL)), c("Search_Type", "Stop_Outcome", "count")) 
+st_totals_so2 <- data.frame(st_by_so2 %>% group_by(Search_Type) %>% dplyr::summarise(sum_st = sum(count)))
+st_by_so2 <- left_join(st_by_so2, st_totals_so2, by = "Search_Type")
+st_by_so2 <- st_by_so2 %>% mutate(percent_of_st  = count/sum_st)
 ggplot(st_by_so %>% filter(is.na(Stop_Outcome) != TRUE & Search_Type != ""), aes(Stop_Outcome, percent_of_st, fill = Search_Type)) +
   geom_bar(stat = "identity", position = "dodge") +
   labs(title = "Proportion of Stop outcomes by Search Type", x = "Stop Outcome", y = "Percent of stops") +
   scale_y_continuous(labels = scales::percent) +
   scale_fill_discrete(name = "Search Type")
 ggsave("./EDA_images/97_stop_outcome_by_st.png")
+
+ggplot(st_by_so2 %>% filter(is.na(Stop_Outcome) != TRUE & Search_Type != ""), aes(Stop_Outcome, percent_of_st, fill = Search_Type)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Proportion of Stop outcomes by Search Type", x = "Stop Outcome", y = "Percent of stops") +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_discrete(name = "Search Type")
+ggsave("./EDA_images/97.2_stop_outcome_by_st.png")
 
 #stop_duration
 sd_by_so <- setNames(data.frame(table(df_clean$stop_duration, df_clean$stop_outcome, exclude = NULL)), c("Stop_Duration", "Stop_Outcome", "count")) 
@@ -1824,18 +1995,178 @@ ggplot(vc_by_so %>% filter(is.na(Stop_Outcome) != TRUE), aes(Stop_Outcome, perce
   scale_fill_discrete(name = "Violation Count")
 ggsave("./EDA_images/99_stop_outcome_by_vc.png")
 
+#violation:
+violations2 <- setNames(data.frame(table(df_split3$violation_new, df_split3$stop_outcome, exclude = NULL)), c("Violation", "StopOutcome", "count")) 
+violations_total2 <- violations2 %>% group_by(Violation) %>% dplyr::summarise(total_count = sum(count))
+violations2 <- left_join(violations2, violations_total2, by = "Violation")
+violations2 <- violations2 %>% mutate(so_to_pop = count/total_count)
+ggplot(violations2 %>% filter(is.na(StopOutcome) != TRUE), aes(Violation, so_to_pop, fill = StopOutcome)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme1
+ggsave("./EDA_images/102_stop_outcome_by_stops_violation.png")
+
+ggplot(violations2 %>% filter(is.na(StopOutcome) != TRUE & StopOutcome == "Summons"), aes(Violation, so_to_pop)) +
+  geom_bar(stat = "identity", position = "dodge", fill = "#1E90FF") +
+  theme1
+ggsave("./EDA_images/103_stop_outcome_by_stops_violation.png")
+
+ggplot(violations2 %>% filter(is.na(StopOutcome) != TRUE & StopOutcome == "Ticket"), aes(Violation, so_to_pop)) +
+  geom_bar(stat = "identity", position = "dodge", fill = "#1E90FF") +
+  theme1
+ggsave("./EDA_images/104_stop_outcome_by_stops_violation.png")
+
+ggplot(violations2 %>% filter(is.na(StopOutcome) != TRUE & StopOutcome == "Verbal Warning"), aes(Violation, so_to_pop)) +
+  geom_bar(stat = "identity", position = "dodge", fill = "#1E90FF") +
+  theme1
+ggsave("./EDA_images/105_stop_outcome_by_stops_violation.png")
+
+ggplot(violations2 %>% filter(is.na(StopOutcome) != TRUE & StopOutcome == "Written Warning"), aes(Violation, so_to_pop)) +
+  geom_bar(stat = "identity", position = "dodge", fill = "#1E90FF") +
+  theme1
+ggsave("./EDA_images/106_stop_outcome_by_stops_violation.png")
+
+ggplot(violations2 %>% filter(Violation == "violation_raw_Defective.Lights"), aes(StopOutcome, so_to_pop, fill = StopOutcome)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme1
+
+race_by_violation <- setNames(data.frame(table(df_split3$violation_new, df_split3$driver_race_raw, exclude = NULL)), c("Violation", "Race", "count")) 
+race_by_viol_tot <- race_by_violation %>% group_by(Race) %>% dplyr::summarise(total_count = sum(count))
+race_by_violation <- left_join(race_by_violation, race_by_viol_tot, by = "Race")
+race_by_violation <- race_by_violation %>% mutate(so_to_pop = count/total_count)
+
+ggplot(race_by_violation %>% filter(Violation == "violation_raw_Suspended.License"), aes(Race, so_to_pop)) + 
+  geom_bar(stat = "identity", position = "dodge", fill = "#1E90FF") +
+  theme1 +
+  labs(title = "Suspended License")
+ggsave("./EDA_images/107_race_violation.png")
+
+ggplot(race_by_violation %>% filter(Violation == "violation_raw_Seatbelt"), aes(Race, so_to_pop)) + 
+  geom_bar(stat = "identity", position = "dodge", fill = "#1E90FF") +
+  theme1 +
+  labs(title = "Seatbelt")
+ggsave("./EDA_images/108_race_violation.png")
+
+ggplot(race_by_violation %>% filter(Violation == "violation_raw_Defective.Lights"), aes(Race, so_to_pop)) + 
+  geom_bar(stat = "identity", position = "dodge", fill = "#1E90FF") +
+  theme1 +
+  labs(title = "Defective Lights")
+ggsave("./EDA_images/109_race_violation.png")
+
+race_viol_so <- setNames(data.frame(table(df_split3$violation_new, df_split3$driver_race_raw, df_split3$stop_outcome, exclude = NULL)), c("Violation", "Race", "StopOutcome", "count")) 
+race_viol_so_tot <- race_viol_so %>% group_by(Race, Violation) %>% dplyr::summarise(total_count = sum(count))
+race_viol_so <- left_join(race_viol_so, race_viol_so_tot, by = c("Race", "Violation"))
+race_viol_so <- race_viol_so %>% mutate(so_to_pop = count/total_count)
+
+ggplot(race_viol_so %>% filter(Race == "Black"), aes(StopOutcome, so_to_pop, fill = Violation)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme1
+
+ggplot(race_viol_so %>% filter(Race == "White"), aes(StopOutcome, so_to_pop, fill = Violation)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme1
+
+ggplot(race_viol_so %>% filter(Race == "Asian"), aes(StopOutcome, so_to_pop, fill = Violation)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme1
+
+gen_by_violation <- setNames(data.frame(table(df_split3$violation_new, df_split3$driver_gender, exclude = NULL)), c("Violation", "Gender", "count")) 
+gen_by_viol_tot <- gen_by_violation %>% group_by(Gender) %>% dplyr::summarise(total_count = sum(count))
+gen_by_violation <- left_join(gen_by_violation, gen_by_viol_tot, by = "Gender")
+gen_by_violation <- gen_by_violation %>% mutate(so_to_pop = count/total_count)
+
+ggplot(gen_by_violation %>% filter(Violation == "violation_raw_Suspended.License"), aes(Gender, so_to_pop)) + 
+  geom_bar(stat = "identity", position = "dodge", fill = "#1E90FF") +
+  theme1 +
+  labs(title = "Suspended License")
+ggsave("./EDA_images/107.1_gender_violation.png")
+
+ggplot(gen_by_violation %>% filter(Violation == "violation_raw_Seatbelt"), aes(Gender, so_to_pop)) + 
+  geom_bar(stat = "identity", position = "dodge", fill = "#1E90FF") +
+  theme1 +
+  labs(title = "Seatbelt")
+ggsave("./EDA_images/108.1_gender_violation.png")
+
+ggplot(gen_by_violation %>% filter(Violation == "violation_raw_Defective.Lights"), aes(Gender, so_to_pop)) + 
+  geom_bar(stat = "identity", position = "dodge", fill = "#1E90FF") +
+  theme1 +
+  labs(title = "Defective Lights")
+ggsave("./EDA_images/109.1_gender_violation.png")
+
+county_by_violation <- setNames(data.frame(table(df_split3$violation_new, df_split3$county_name, exclude = NULL)), c("Violation", "County", "count")) 
+county_by_viol_tot <- county_by_violation %>% group_by(County) %>% dplyr::summarise(total_count = sum(count))
+county_by_violation <- left_join(county_by_violation, county_by_viol_tot, by = "County")
+county_by_violation <- county_by_violation %>% mutate(so_to_pop = count/total_count)
+
+ggplot(county_by_violation, aes(County, so_to_pop, fill = Violation)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme1
+
+ggplot(county_by_violation %>%  filter(County != ""), aes(Violation, so_to_pop, fill = County)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme1
+
+
 #driver_age
+# age_by_so <- setNames(data.frame(table(df_clean$driver_age, df_clean$stop_outcome, exclude = NULL)), c("Age", "Stop_Outcome", "count")) 
+# age_totals_so <- data.frame(age_by_so %>% group_by(Stop_Outcome) %>% dplyr::summarise(sum_so = sum(count)))
+# age_by_so <- left_join(age_by_so, age_totals_so, by = "Stop_Outcome")
+# age_by_so <- age_by_so %>% mutate(percent_of_so  = count/sum_so)
 age_by_so <- setNames(data.frame(table(df_clean$driver_age, df_clean$stop_outcome, exclude = NULL)), c("Age", "Stop_Outcome", "count")) 
-age_totals_so <- data.frame(age_by_so %>% group_by(Stop_Outcome) %>% dplyr::summarise(sum_so = sum(count)))
-age_by_so <- left_join(age_by_so, age_totals_so, by = "Stop_Outcome")
+age_totals_so <- data.frame(age_by_so %>% group_by(Age) %>% dplyr::summarise(sum_so = sum(count)))
+age_by_so <- left_join(age_by_so, age_totals_so, by = "Age")
 age_by_so <- age_by_so %>% mutate(percent_of_so  = count/sum_so)
 ggplot(age_by_so %>% filter(is.na(Stop_Outcome) != TRUE & is.na(Age) != TRUE), aes(Age, percent_of_so)) +
   geom_bar(stat = "identity", fill = "#1E90FF") +
   facet_grid(Stop_Outcome ~ .) +
   labs(title = "Stop Outcome by Age", y = "Proportion") +
   scale_y_continuous(labels = scales::percent)
-ggsave("./EDA_images/100_stop_outcome_by_age.png")
+ggsave("./EDA_images/100.2_stop_outcome_by_age.png")
 
+ggplot(age_by_so %>% filter(is.na(Stop_Outcome) != TRUE & is.na(Age) != TRUE & Stop_Outcome == "Verbal Warning"), aes(Age, percent_of_so)) +
+  geom_bar(stat = "identity", fill = "#1E90FF") +
+  facet_grid(Stop_Outcome ~ .) +
+  labs(title = "Stop Outcome by Age", y = "Proportion") +
+  scale_y_continuous(labels = scales::percent)
+ggsave("./EDA_images/100.1_stop_outcome_by_age.png")
+
+ggplot(age_by_so %>% filter(is.na(Stop_Outcome) != TRUE & is.na(Age) != TRUE & Stop_Outcome == "Written Warning"), aes(Age, percent_of_so)) +
+  geom_bar(stat = "identity", fill = "#1E90FF") +
+  facet_grid(Stop_Outcome ~ .) +
+  labs(title = "Stop Outcome by Age", y = "Proportion") +
+  scale_y_continuous(labels = scales::percent)
+ggsave("./EDA_images/100.3_stop_outcome_by_age.png")
+
+ggplot(age_by_so %>% filter(is.na(Stop_Outcome) != TRUE & is.na(Age) != TRUE & Stop_Outcome == "Ticket"), aes(Age, percent_of_so)) +
+  geom_bar(stat = "identity", fill = "#1E90FF") +
+  facet_grid(Stop_Outcome ~ .) +
+  labs(title = "Stop Outcome by Age", y = "Proportion") +
+  scale_y_continuous(labels = scales::percent)
+ggsave("./EDA_images/100.4_stop_outcome_by_age.png")
+
+ggplot(age_by_so %>% filter(is.na(Stop_Outcome) != TRUE & is.na(Age) != TRUE & Stop_Outcome == "Summons"), aes(Age, percent_of_so)) +
+  geom_bar(stat = "identity", fill = "#1E90FF") +
+  facet_grid(Stop_Outcome ~ .) +
+  labs(title = "Stop Outcome by Age", y = "Proportion") +
+  scale_y_continuous(labels = scales::percent)
+ggsave("./EDA_images/100.5_stop_outcome_by_age.png")
+
+
+ggplot(age_by_so %>% filter(is.na(Stop_Outcome) != TRUE & is.na(Age) != TRUE & Stop_Outcome == "Written Warning"), aes(Age, count)) +
+  geom_bar(stat = "identity", fill = "#1E90FF") +
+  facet_grid(Stop_Outcome ~ .) +
+  labs(title = "Stop Outcome by Age", y = "Count")
+ggsave("./EDA_images/100.5_stop_outcome_by_age.png")
+
+
+
+# stop outcome by stop duration
+df_so_sd <- setNames(data.frame(table(df_clean$stop_outcome, df_clean$stop_duration, exclude = NULL)), c("Stop_Outcome", "Stop_Duration","count")) 
+so_sd_tot <- data.frame(df_so_sd %>% group_by(Stop_Outcome) %>% dplyr::summarise(sum_so = sum(count)))
+df_so_sd <- left_join(df_so_sd, so_sd_tot, by = "Stop_Outcome")
+df_so_sd<- df_so_sd %>% mutate(percent_of_so  = count/sum_so)
+ggplot(df_so_sd %>% filter(is.na(Stop_Outcome) != TRUE), aes(Stop_Duration, percent_of_so, fill = Stop_Outcome)) +
+  geom_bar(stat = "identity", position = "dodge")
+ggsave("./EDA_images/101_stop_outcome_by_stop duration.png")
 
 
 
@@ -1850,6 +2181,47 @@ ggsave("./EDA_images/100_stop_outcome_by_age.png")
 # ggplot(df_clean %>% filter(is_arrested == TRUE), aes(search_type)) +
 #   geom_bar(position = "dodge") 
 
+#violation by race
+viol_race <- setNames(data.frame(table(df_split3$violation_new, df_split3$driver_race_raw, exclude = NULL)), c("Violation", "Race", "count")) 
+viol_race_tot <- viol_race %>% group_by(Race) %>% dplyr::summarise(total_count = sum(count))
+viol_race <- left_join(viol_race, viol_race_tot, by = "Race")
+viol_race <- viol_race%>% mutate(so_to_pop = count/total_count)
+ggplot(viol_race, aes(Violation, so_to_pop, fill = Race)) +
+  geom_bar(stat = "identity", position = "dodge") + 
+  theme1
+
+viol_race2 <- setNames(data.frame(table(df_split3$violation_new, df_split3$driver_race_raw, df_split3$stop_outcome,exclude = NULL)), c("Violation", "Race", "StopOutcome","count")) 
+viol_race_tot2 <- viol_race2 %>% group_by(Race, Violation) %>% dplyr::summarise(total_count = sum(count))
+viol_race2 <- left_join(viol_race2, viol_race_tot2, by = c("Race", "Violation"))
+viol_race2 <- viol_race2 %>% mutate(so_to_pop = count/total_count)
+
+ggplot(viol_race2 %>% filter(Violation == "violation_raw_Suspended.License"), aes(StopOutcome, so_to_pop, fill = Race)) +
+  geom_bar(stat = "identity", position = "dodge") + 
+  theme1
+
+ggplot(viol_race2 %>% filter(Violation == "violation_raw_Moving.Violation"), aes(StopOutcome, so_to_pop, fill = Race)) +
+  geom_bar(stat = "identity", position = "dodge") + 
+  theme1
+
+ggplot(viol_race2 %>% filter(Violation == "violation_raw_Defective.Lights"), aes(StopOutcome, so_to_pop, fill = Race)) +
+  geom_bar(stat = "identity", position = "dodge") + 
+  theme1
+
+ggplot(viol_race2 %>% filter(Violation == "violation_raw_Display.of.Plates"), aes(StopOutcome, so_to_pop, fill = Race)) +
+  geom_bar(stat = "identity", position = "dodge") + 
+  theme1
 
 
+viol_race3 <- setNames(data.frame(table(df_split3$violation_new, df_split3$driver_race_raw, df_split3$stop_outcome,exclude = NULL)), c("Violation", "Race", "StopOutcome","count")) 
+viol_race_tot3 <- viol_race3 %>% group_by(Race, StopOutcome) %>% dplyr::summarise(total_count = sum(count))
+viol_race3 <- left_join(viol_race3, viol_race_tot3, by = c("Race", "StopOutcome"))
+viol_race3 <- viol_race3 %>% mutate(so_to_pop = count/total_count)
+
+ggplot(viol_race3 %>% filter(StopOutcome == "Ticket"), aes(Violation, so_to_pop, fill = Race)) +
+  geom_bar(stat = "identity", position = "dodge") + 
+  theme1
+
+ggplot(viol_race3 %>% filter(StopOutcome == "Arrest"), aes(Violation, so_to_pop, fill = Race)) +
+  geom_bar(stat = "identity", position = "dodge") + 
+  theme1
 
