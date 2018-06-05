@@ -1,3 +1,5 @@
+# This file contains all of my statistical analysis tests
+
 library(ggplot2)
 library(dplyr)
 library(tidyr)
@@ -465,6 +467,8 @@ mo_combined <- rbind(winter_mo, non_winter_mo)
 prop.test(x = as.vector(mo_combined[,3]), n = as.vector(mo_combined[,7]), alternative = "less")
 prop.test(x = as.vector(mo_combined[,4]), n = as.vector(mo_combined[,7]), alternative = "greater")
 prop.test(x = as.vector(mo_combined[,5]), n = as.vector(mo_combined[,7]), alternative = "greater")
+prop.test(x = as.vector(mo_combined[,1]), n = as.vector(mo_combined[,7]), alternative = "greater")
+prop.test(x = as.vector(mo_combined[,2]), n = as.vector(mo_combined[,7]), alternative = "greater")
 
 
 
@@ -564,6 +568,12 @@ prop.test(x = as.vector(so_cf_combined[,2]), n = as.vector(so_cf_combined[,7]), 
 prop.test(x = as.vector(so_cf_combined[,4]), n = as.vector(so_cf_combined[,7]), alternative = "less")
 prop.test(x = as.vector(so_cf_combined[,5]), n = as.vector(so_cf_combined[,7]), alternative = "less")
 
+df_search_conducted$Stop_Outcome2 <- as.character(df_search_conducted$stop_outcome)
+df_search_conducted$Stop_Outcome2[df_search_conducted$Stop_Outcome %in% c("Arrest", "Summons")] <- "Worse"
+df_search_conducted$Stop_Outcome2[df_search_conducted$Stop_Outcome %in% c("Verbal Warning", "Written Warning")] <- "Best"
+so_cf2 <- addmargins(table(df_search_conducted$contraband_found, df_search_conducted$Stop_Outcome2,  useNA = "ifany"))
+so_cf2 <- head(so_cf2, -1)
+prop.test(x = as.vector(so_cf2[,3]), n = as.vector(so_cf2[,5]))
 
 
 
@@ -614,6 +624,14 @@ so_1_combined <- rbind(so_1, so_non1)
 prop.test(x = as.vector(so_1_combined[,3]), n = as.vector(so_1_combined[,7]), alternative = "greater")
 prop.test(x = as.vector(so_1_combined[,4]), n = as.vector(so_1_combined[,7]), alternative = "greater")
 prop.test(x = as.vector(so_1_combined[,5]), n = as.vector(so_1_combined[,7]), alternative = "greater")
+
+
+df_clean$violation_count2 <- as.character(df_clean$violation_count)
+df_clean$violation_count2[df_clean$violation_count > 1] <- "> 1"
+so_vc2 <- addmargins(table(df_clean$violation_count2, df_clean$stop_outcome,  useNA = "ifany"))
+so_vc2 <- head(so_vc2,-1)
+prop.test(x = as.vector(so_vc2[,1]), n = as.vector(so_vc2[,7]), alternative = "greater")
+prop.test(x = as.vector(so_vc2[,2]), n = as.vector(so_vc2[,7]), alternative = "greater")
 
 
 

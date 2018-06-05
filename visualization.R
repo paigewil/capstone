@@ -1,3 +1,5 @@
+# This file is a code dump for all my univariate and bivariate plotting testing
+
 library(ggplot2)
 library(dplyr)
 library(tidyr)
@@ -5,6 +7,10 @@ library(lubridate)
 library(plyr)
 library(ggpubr)
 library(gridExtra)
+library(maps)
+library(choroplethr)
+library(choroplethrMaps)
+library(RColorBrewer)
 
 # Read in file
 df_clean <- read.csv("E:/Learning/Springboard Intro to Data Science/capstone/CT_cleaned_edit.csv")
@@ -25,6 +31,22 @@ census_agegrp <- census %>% group_by(AGEGRP) %>% dplyr::summarise_at(vars(TOT_PO
 census_whole_state <- census %>% filter(AGEGRP == 0) %>% group_by(STATE, STNAME) %>% dplyr::summarise_at(vars(TOT_POP:HNAC_FEMALE), sum)
 
 theme1 <- theme(axis.text.x=element_text(angle=90, hjust=1))
+
+poverty <- read.csv("E:/Learning/Springboard Intro to Data Science/capstone/SAIPESNC_01JUN18_17_18_03_66.csv", stringsAsFactors=F)
+
+uninsured <- read.csv("E:/Learning/Springboard Intro to Data Science/capstone/SAHIE_01JUN18_19_07_35_90.csv", stringsAsFactors=F)
+
+miles <- read.csv("E:/Learning/Springboard Intro to Data Science/capstone/2014_Daily_Vehicle_Miles_Travelled_By_Town_And_Roadway_Classification.csv", stringsAsFactors=F)
+
+weather <- read.csv("E:/Learning/Springboard Intro to Data Science/capstone/1361834.csv", stringsAsFactors=F)
+
+bridges <- read.csv("E:/Learning/Springboard Intro to Data Science/capstone/2014NBI.csv", stringsAsFactors=F)
+
+commutes <- read.csv("E:/Learning/Springboard Intro to Data Science/capstone/county_work_residencecsv.csv", stringsAsFactors=F)
+
+
+
+
 
 #ONE-DIMENSIONAL DISTRIBUTIONS:
 
@@ -1947,6 +1969,26 @@ ggplot(cf_by_so2 %>% filter(is.na(Stop_Outcome) != TRUE), aes(Stop_Outcome, perc
   scale_fill_discrete(name = "Contraband Found")
 ggsave("./EDA_images/96.2_stop_outcome_by_cf.png")
 
+# 
+# cf_by_so3 <- setNames(data.frame(table(st_df$contraband_found, st_df$stop_outcome, exclude = NULL)), c("Contraband_Found", "Stop_Outcome", "count")) 
+# cf_by_so3$Stop_Outcome2 <- as.character(cf_by_so3$Stop_Outcome)
+# cf_by_so3$Stop_Outcome2[cf_by_so3$Stop_Outcome %in% c("Arrest", "Summons")] <- "Worse"
+# cf_by_so3$Stop_Outcome2[cf_by_so3$Stop_Outcome %in% c("Verbal Warning", "Written Warning")] <- "Best"
+df_clean$Stop_Outcome2 <- as.character(df_clean$stop_outcome)
+df_clean$Stop_Outcome2[df_clean$Stop_Outcome %in% c("Arrest", "Summons")] <- "Worse"
+df_clean$Stop_Outcome2[df_clean$Stop_Outcome %in% c("Verbal Warning", "Written Warning")] <- "Best"
+st_df2 <- df_clean %>% filter(search_conducted == TRUE)
+cf_by_so3 <- setNames(data.frame(table(st_df2$contraband_found, st_df2$Stop_Outcome2, exclude = NULL)), c("Contraband_Found", "Stop_Outcome", "count")) 
+cf_totals_so3 <- data.frame(cf_by_so3 %>% group_by(Contraband_Found) %>% dplyr::summarise(sum_cf = sum(count)))
+cf_by_so3 <- left_join(cf_by_so3, cf_totals_so3, by = "Contraband_Found")
+cf_by_so3 <- cf_by_so3 %>% mutate(percent_of_cf  = count/sum_cf)
+ggplot(cf_by_so3 %>% filter(is.na(Stop_Outcome) != TRUE), aes(Stop_Outcome, percent_of_cf, fill = Contraband_Found)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Proportion of Stop outcomes by Contraband Found status", x = "Stop Outcome", y = "Percent of stops") +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_discrete(name = "Contraband Found")
+ggsave("./EDA_images/96.3_stop_outcome_by_cf.png")
+
 #search_type
 st_by_so <- setNames(data.frame(table(df_clean$search_type_raw, df_clean$stop_outcome, exclude = NULL)), c("Search_Type", "Stop_Outcome", "count")) 
 st_totals_so <- data.frame(st_by_so %>% group_by(Search_Type) %>% dplyr::summarise(sum_st = sum(count)))
@@ -1995,6 +2037,32 @@ ggplot(vc_by_so %>% filter(is.na(Stop_Outcome) != TRUE), aes(Stop_Outcome, perce
   scale_fill_discrete(name = "Violation Count")
 ggsave("./EDA_images/99_stop_outcome_by_vc.png")
 
+
+df_clean$violation_count2 <- as.character(df_clean$violation_count)
+df_clean$violation_count2[df_clean$violation_count > 1] <- "> 1"
+vc_by_so2 <- setNames(data.frame(table(df_clean$violation_count2, df_clean$stop_outcome, exclude = NULL)), c("Violation_Count", "Stop_Outcome", "count")) 
+vc_totals_so2 <- data.frame(vc_by_so2 %>% group_by(Violation_Count) %>% dplyr::summarise(sum_vc = sum(count)))
+vc_by_so2 <- left_join(vc_by_so2, vc_totals_so2, by = "Violation_Count")
+vc_by_so2 <- vc_by_so2 %>% mutate(percent_of_vc  = count/sum_vc)
+ggplot(vc_by_so2 %>% filter(is.na(Stop_Outcome) != TRUE), aes(Stop_Outcome, percent_of_vc, fill = Violation_Count)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Proportion of Stop outcomes by Violation Count", x = "Stop Outcome", y = "Percent of stops") +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_discrete(name = "Violation Count")
+ggsave("./EDA_images/99.1_stop_outcome_by_vc.png")
+
+vc_by_so3 <- setNames(data.frame(table(df_clean$violation_count2, df_clean$driver_race_raw, df_clean$stop_outcome, exclude = NULL)), c("Violation_Count", "Race","Stop_Outcome", "count")) 
+vc_totals_so3 <- data.frame(vc_by_so3 %>% group_by(Violation_Count, Race) %>% dplyr::summarise(sum_vc = sum(count)))
+vc_by_so3 <- left_join(vc_by_so3, vc_totals_so3, by = c("Violation_Count", "Race"))
+vc_by_so3 <- vc_by_so3 %>% mutate(percent_of_vc  = count/sum_vc)
+ggplot(vc_by_so3 %>% filter(is.na(Stop_Outcome) != TRUE), aes(Stop_Outcome, percent_of_vc, fill = Violation_Count)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(Race ~ .) +
+  labs(title = "Proportion of Stop outcomes by Violation Count", x = "Stop Outcome", y = "Percent of stops") +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_discrete(name = "Violation Count")
+
+
 #violation:
 violations2 <- setNames(data.frame(table(df_split3$violation_new, df_split3$stop_outcome, exclude = NULL)), c("Violation", "StopOutcome", "count")) 
 violations_total2 <- violations2 %>% group_by(Violation) %>% dplyr::summarise(total_count = sum(count))
@@ -2004,6 +2072,11 @@ ggplot(violations2 %>% filter(is.na(StopOutcome) != TRUE), aes(Violation, so_to_
   geom_bar(stat = "identity", position = "dodge") +
   theme1
 ggsave("./EDA_images/102_stop_outcome_by_stops_violation.png")
+
+ggplot(violations2 %>% filter(is.na(StopOutcome) != TRUE), aes(StopOutcome, so_to_pop, fill = Violation)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme1
+ggsave("./EDA_images/102.1_stop_outcome_by_stops_violation.png")
 
 ggplot(violations2 %>% filter(is.na(StopOutcome) != TRUE & StopOutcome == "Summons"), aes(Violation, so_to_pop)) +
   geom_bar(stat = "identity", position = "dodge", fill = "#1E90FF") +
@@ -2052,6 +2125,18 @@ ggplot(race_by_violation %>% filter(Violation == "violation_raw_Defective.Lights
   labs(title = "Defective Lights")
 ggsave("./EDA_images/109_race_violation.png")
 
+ggplot(race_by_violation %>% filter(Violation == "violation_raw_Display.of.Plates"), aes(Race, so_to_pop)) + 
+  geom_bar(stat = "identity", position = "dodge", fill = "#1E90FF") +
+  theme1 +
+  labs(title = "Display of Plates")
+ggsave("./EDA_images/110_race_violation.png")
+
+ggplot(race_by_violation %>% filter(Violation == "violation_raw_Equipment.Violation"), aes(Race, so_to_pop)) + 
+  geom_bar(stat = "identity", position = "dodge", fill = "#1E90FF") +
+  theme1 +
+  labs(title = "Equipment Violation")
+ggsave("./EDA_images/111_race_violation.png")
+
 race_viol_so <- setNames(data.frame(table(df_split3$violation_new, df_split3$driver_race_raw, df_split3$stop_outcome, exclude = NULL)), c("Violation", "Race", "StopOutcome", "count")) 
 race_viol_so_tot <- race_viol_so %>% group_by(Race, Violation) %>% dplyr::summarise(total_count = sum(count))
 race_viol_so <- left_join(race_viol_so, race_viol_so_tot, by = c("Race", "Violation"))
@@ -2068,6 +2153,22 @@ ggplot(race_viol_so %>% filter(Race == "White"), aes(StopOutcome, so_to_pop, fil
 ggplot(race_viol_so %>% filter(Race == "Asian"), aes(StopOutcome, so_to_pop, fill = Violation)) +
   geom_bar(stat = "identity", position = "dodge") +
   theme1
+
+ggplot(race_viol_so %>% filter(Violation == "violation_raw_Display.of.Plates"), aes(StopOutcome, so_to_pop, fill = Race)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme1
+ggsave("./EDA_images/123_display_of_plates-so_race.png")
+
+ggplot(race_viol_so %>% filter(Violation == "violation_raw_Defective.Lights"), aes(StopOutcome, so_to_pop, fill = Race)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme1
+ggsave("./EDA_images/124_defective_lights_so_race.png")
+
+ggplot(race_viol_so %>% filter(Violation == "violation_raw_Suspended.License"), aes(StopOutcome, so_to_pop, fill = Race)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme1
+ggsave("./EDA_images/125_suspended_license_so_race.png")
+
 
 gen_by_violation <- setNames(data.frame(table(df_split3$violation_new, df_split3$driver_gender, exclude = NULL)), c("Violation", "Gender", "count")) 
 gen_by_viol_tot <- gen_by_violation %>% group_by(Gender) %>% dplyr::summarise(total_count = sum(count))
@@ -2155,8 +2256,14 @@ ggplot(age_by_so %>% filter(is.na(Stop_Outcome) != TRUE & is.na(Age) != TRUE & S
   geom_bar(stat = "identity", fill = "#1E90FF") +
   facet_grid(Stop_Outcome ~ .) +
   labs(title = "Stop Outcome by Age", y = "Count")
-ggsave("./EDA_images/100.5_stop_outcome_by_age.png")
+ggsave("./EDA_images/100.6_stop_outcome_by_age.png")
 
+ggplot(age_by_so %>% filter(is.na(Stop_Outcome) != TRUE & is.na(Age) != TRUE & Stop_Outcome == "Arrest"), aes(Age, percent_of_so)) +
+  geom_bar(stat = "identity", fill = "#1E90FF") +
+  facet_grid(Stop_Outcome ~ .) +
+  labs(title = "Stop Outcome by Age", y = "Proportion") +
+  scale_y_continuous(labels = scales::percent)
+ggsave("./EDA_images/100.7_stop_outcome_by_age.png")
 
 
 # stop outcome by stop duration
@@ -2225,3 +2332,200 @@ ggplot(viol_race3 %>% filter(StopOutcome == "Arrest"), aes(Violation, so_to_pop,
   geom_bar(stat = "identity", position = "dodge") + 
   theme1
 
+
+#maps
+
+#county_by_arrest_TRUE <- county_by_arrest %>% filter(Arrested == TRUE & County != "")
+#map(database = "df_clean", fill = TRUE, col = df_clean)
+county_by_arrest_TRUE <- setNames(data.frame(table(df_clean$county_fips, df_clean$is_arrested, exclude = NULL)), c("County", "Arrested", "count")) 
+county_totals_TRUE <- data.frame(county_by_arrest_TRUE %>% group_by(County) %>% dplyr::summarise(sum_county = sum(count)))
+county_by_arrest_TRUE <- left_join(county_by_arrest_TRUE, county_totals_TRUE, by = "County")
+county_by_arrest_TRUE <- county_by_arrest_TRUE %>% mutate(percent_of_county  = count/sum_county)
+county_by_arrest_TRUE <- county_by_arrest_TRUE %>% filter(Arrested == TRUE, is.na(County) != TRUE)
+county_map_df <- data.frame(region = as.integer(as.character(county_by_arrest_TRUE$County)),
+                            value = county_by_arrest_TRUE$count)
+#map(database = "county_map_df", fill = TRUE)
+county_choropleth(county_map_df, legend = "# of Arrests", state_zoom = "connecticut", num_colors = 1)
+#county_choropleth(county_map_df, legend = "# of Arrests", state_zoom = "connecticut", num_colors = 1, reference_map = TRUE)
+
+gcounty <- map_data("county")
+gcounty <- mutate(gcounty, polyname = paste(region, subregion, sep = ","))
+gcounty <- left_join(gcounty, county.fips, "polyname")
+gcounty_arrests <- left_join(gcounty, county_map_df, by = c("fips" = "region"))
+ggplot(gcounty_arrests %>% filter(is.na(value) == FALSE)) +
+  geom_polygon(aes(long, lat, group = group, fill = value)) +
+  geom_text(data = county_label, aes(x = avg_long, y = avg_lat, label = c_name)) +
+  scale_fill_gradientn(colours = brewer.pal(n=9, name = "YlGnBu"))
+  #scale_fill_gradient(low = "#56B1F7", high = "#132B43")
+ggsave("./EDA_images/112_arrests_per_county.png")
+
+
+county_map_df2 <- data.frame(region = as.integer(as.character(county_by_arrest_TRUE$County)),
+                            value = county_by_arrest_TRUE$percent_of_county)
+gcounty_arrests_per <- left_join(gcounty, county_map_df2, by = c("fips" = "region"))
+ggplot(gcounty_arrests_per %>% filter(is.na(value) == FALSE)) +
+  geom_polygon(aes(long, lat, group = group, fill = value)) +
+  geom_text(data = county_label, aes(x = avg_long, y = avg_lat, label = c_name)) +
+  scale_fill_gradientn(colours = brewer.pal(n=9, name = "YlGnBu"))
+  #scale_fill_gradient(low = "#56B1F7", high = "#132B43")
+ggsave("./EDA_images/112.2_arrests_per_county_percent.png")
+
+
+county_by_arrest2 <- setNames(data.frame(table(df_clean$county_fips, df_clean$is_arrested, exclude = NULL)), c("County", "Arrested", "count")) 
+county_by_arrest2$County <- as.integer(as.character(county_by_arrest2$County))
+county_arrests <- left_join(county_by_arrest2, county_pop, by = c("County" = "county_fips"))
+county_arrests <- county_arrests %>% mutate(percent = count/TOT_POP)
+county_arrests <- county_arrests %>% filter(is.na(County) != TRUE & Arrested == TRUE)
+gcounty_arrests_per2 <- left_join(gcounty, county_arrests, by = c("fips" = "County"))
+ggplot(gcounty_arrests_per2 %>% filter(is.na(percent) == FALSE)) +
+  geom_polygon(aes(long, lat, group = group, fill = percent)) +
+  geom_text(data = county_label, aes(x = avg_long, y = avg_lat, label = c_name)) +
+  scale_fill_gradientn(colours = brewer.pal(n=9, name = "YlGnBu"))
+  #scale_fill_gradient(low = "#56B1F7", high = "#132B43")
+ggsave("./EDA_images/112.3_arrests_per_county_percent_of_pop.png")
+
+
+#tst <- gcounty_arrests %>% filter(is.na(value) == FALSE) %>% group_by(fips) %>% dplyr::mutate(avg_lat = mean(gcounty_arrests$lat), avg_lon = mean(gcounty_arrests$long))
+#tst <- gcounty_arrests %>% filter(is.na(value) == FALSE) %>% group_by(fips) %>% dplyr::summarise(avg_lat = mean(gcounty_arrests$lat), avg_lon = mean(gcounty_arrests$long))
+#tst <- gcounty_arrests %>% filter(is.na(value) == FALSE) %>% group_by(fips) %>% dplyr::summarise(n = n(), avg = mean(gcounty_arrests$lat), tot_lat = sum(lat), tot_long = sum(gcounty_arrests$long)) %>% dplyr::summarise(avg_lat = tot_lat/n, avg_lon = tot_long/n)
+county_label <- gcounty_arrests %>% filter(is.na(value) == FALSE) %>% group_by(fips) %>% dplyr::summarise(avg_lat = mean(lat), avg_long = mean(long))
+#county_label <- gcounty_arrests %>% filter(is.na(value) == FALSE) %>% group_by(fips) %>% dplyr::summarise(avg_lat = median(lat), avg_long = median(long))
+county_name <- df_clean %>% select(county_fips, county_name) %>% distinct()
+county_label <- left_join(county_label, county_name, by = c("fips" = "county_fips"))
+county_label <- county_label %>% mutate(c_name = gsub(" County", "", county_name))
+
+
+county_pop <- census_county %>% select(county_fips, TOT_POP, CTYNAME) %>% mutate(county_name = gsub(" County", "", CTYNAME))
+gcounty_pop <- left_join(gcounty, county_pop, by = c("fips" = "county_fips"))
+ggplot(gcounty_pop %>% filter(is.na(TOT_POP) == FALSE)) +
+  geom_polygon(aes(long, lat, group = group, fill = TOT_POP)) +
+  geom_text(data = county_label, aes(x = avg_long, y = avg_lat, label = c_name)) +
+  scale_fill_gradientn(colours = brewer.pal(n=9, name = "YlGnBu"))
+  #scale_fill_gradient(low = "#56B1F7", high = "#132B43")
+ggsave("./EDA_images/113_pop_per_county.png")
+
+
+county_pov <- data.frame(fips= as.integer(as.character(poverty$County.ID)), poverty = as.character(poverty$All.Ages.in.Poverty.Count))
+county_pov$poverty <- as.numeric(gsub(",", "", county_pov$poverty))
+gcounty_pov <- left_join(gcounty, county_pov, by = "fips")
+ggplot(gcounty_pov %>% filter(is.na(poverty) == FALSE)) +
+  geom_polygon(aes(long, lat, group = group, fill = poverty)) +
+  geom_text(data = county_label, aes(x = avg_long, y = avg_lat, label = c_name)) +
+  scale_fill_gradientn(colours = brewer.pal(n=9, name = "YlGnBu"))
+  #scale_fill_gradient(low = "#56B1F7", high = "#132B43")
+ggsave("./EDA_images/114_pov_per_county.png")
+
+
+county_pov_percent <- data.frame(fips= as.integer(as.character(poverty$County.ID)), poverty_per = as.character(poverty$All.Ages.in.Poverty.Percent))
+county_pov_percent$poverty_per <- as.numeric(gsub(",", "", county_pov_percent$poverty_per))
+gcounty_pov_percent <- left_join(gcounty, county_pov_percent, by = "fips")
+ggplot(gcounty_pov_percent %>% filter(is.na(poverty_per) == FALSE)) +
+  geom_polygon(aes(long, lat, group = group, fill = poverty_per)) +
+  geom_text(data = county_label, aes(x = avg_long, y = avg_lat, label = c_name)) +
+  scale_fill_gradientn(colours = brewer.pal(n=9, name = "YlGnBu"))
+  #scale_fill_gradient(low = "#56B1F7", high = "#132B43")
+ggsave("./EDA_images/114.2_pov_percent_per_county.png")
+
+
+county_income <- data.frame(fips= as.integer(as.character(poverty$County.ID)), income = as.character(poverty$Median.Household.Income.in.Dollars))
+county_income$income <- gsub(",", "", county_income$income)
+county_income$income <- as.numeric(gsub("\\$", "", county_income$income))
+gcounty_income <- left_join(gcounty, county_income, by = "fips")
+ggplot(gcounty_income %>% filter(is.na(income) == FALSE)) +
+  geom_polygon(aes(long, lat, group = group, fill = income)) +
+  geom_text(data = county_label, aes(x = avg_long, y = avg_lat, label = c_name)) +
+  scale_fill_gradientn(colours = brewer.pal(n=9, name = "YlGnBu"))
+  #scale_fill_gradient(low = "#56B1F7", high = "#132B43")
+ggsave("./EDA_images/115_income_per_county.png")
+
+
+#uninsured
+county_uninsured <- data.frame(fips= as.integer(as.character(uninsured$ID)), uninsured = uninsured$Uninsured...)
+gcounty_uninsured <- left_join(gcounty, county_uninsured, by = "fips")
+ggplot(gcounty_uninsured %>% filter(is.na(uninsured) == FALSE)) +
+  geom_polygon(aes(long, lat, group = group, fill = uninsured)) +
+  geom_text(data = county_label, aes(x = avg_long, y = avg_lat, label = c_name)) +
+  scale_fill_gradientn(colours = brewer.pal(n=9, name = "YlGnBu"))
+  #scale_fill_gradient(low = "#56B1F7", high = "#132B43")
+ggsave("./EDA_images/116_uninsured_per_county.png")
+
+
+#miles travelled
+miles_df <- data.frame(county = miles$County, interstate = miles$Interstate.DVMT, freeway = miles$Freeway.DVMT)
+miles_df$county <- as.character(miles_df$county)
+miles_df2 <- miles_df %>% group_by(county) %>% dplyr::summarise(sum_interstate = sum(interstate), sum_freeway = sum(freeway))
+miles_df2 <- left_join(miles_df2, county_label, by = c("county" = "c_name"))
+gcounty_miles <- left_join(gcounty, miles_df2, by = "fips")
+ggplot(gcounty_miles %>% filter(is.na(sum_interstate) == FALSE)) +
+  geom_polygon(aes(long, lat, group = group, fill = sum_interstate)) +
+  geom_text(data = county_label, aes(x = avg_long, y = avg_lat, label = c_name)) +
+  scale_fill_gradientn(colours = brewer.pal(n=9, name = "YlGnBu"))
+  #scale_fill_gradient(low = "#56B1F7", high = "#132B43")
+ggsave("./EDA_images/117_interstate_miles_per_county.png")
+
+ggplot(gcounty_miles %>% filter(is.na(sum_freeway) == FALSE)) +
+  geom_polygon(aes(long, lat, group = group, fill = sum_freeway)) +
+  geom_text(data = county_label, aes(x = avg_long, y = avg_lat, label = c_name)) +
+  scale_fill_gradientn(colours = brewer.pal(n=9, name = "YlGnBu"))
+  #scale_fill_gradient(low = "#56B1F7", high = "#132B43")
+ggsave("./EDA_images/118_freeway_miles_per_county.png")
+
+#weather
+weather_df <- weather %>% group_by(DATE) %>% dplyr::summarise(tot_precip = sum(PRCP, na.rm = TRUE))
+weather_df$DATE <- as.POSIXct(weather_df$DATE, "%m/%d/%Y", tz = "America/New_York")
+
+ggplot(weather_df, aes(x = DATE, y = tot_precip)) + 
+  geom_line(stat = "identity", fill = "#1E90FF")  +
+  geom_smooth(se = FALSE, color = "red") + 
+  scale_x_datetime(date_breaks = "1 month", date_labels = "%m/%Y") +
+  theme1 + 
+  labs(title = "Total precipitation per day")
+ggsave("./EDA_images/119_precipitation.png")
+
+
+#bridges
+bridges$County.Code <- bridges$County.Code + 9000
+bridge_count <- bridges %>% group_by(County.Code) %>% dplyr::summarise(tot = n())
+gcounty_briges <- left_join(gcounty, bridge_count, by = c("fips" = "County.Code"))
+gcounty_bridges <- gcounty_briges %>% filter(is.na(tot) == FALSE & is.na(fips) == FALSE)
+ggplot(gcounty_bridges) +
+  geom_polygon(aes(long, lat, group = group, fill = tot)) +
+  geom_text(data = county_label, aes(x = avg_long, y = avg_lat, label = c_name)) +
+  scale_fill_gradientn(colours = brewer.pal(n=9, name = "YlGnBu"))
+  #scale_fill_gradient(low = brewer.pal(n=9, name = "YlGnBu")[1], high = brewer.pal(n=9, name = "YlGnBu")[9])
+  #scale_fill_distiller(palette ="YlGnBu", direction = -1)
+  #scale_fill_brewer(palette = "BrBG", direction = -1)
+  #scale_fill_gradientn(colours = heat.colors(10), direction = -1)
+  #scale_fill_gradient(low = "#56B1F7", high = "#132B43")
+ggsave("./EDA_images/120_bridges_per_county.png")
+
+
+#commutes
+commutes_ct <- commutes %>% filter(FIPS.State.Code.of.Residence == 9)
+commutes_ct$samecounty <- 1
+commutes_ct$samecounty[commutes_ct$FIPS.County.Code.of.Residence != commutes_ct$FIPS.County.Code.of.Work] <- 0
+
+commute_df <- setNames(data.frame(table(commutes_ct$FIPS.County.Code.of.Residence, commutes_ct$FIPS.County.Code.of.Work, exclude = NULL)), c("residence", "work", "count")) 
+commute_df$samecounty <- 1
+commute_df$samecounty[commute_df$residence != commute_df$work] <- 0
+
+commute_df2 <- setNames(data.frame(table(commutes_ct$FIPS.County.Code.of.Residence, commutes_ct$samecounty, exclude = NULL)), c("residence", "samecounty", "count")) 
+commute_tot <- commute_df2 %>% group_by(residence) %>% dplyr::summarise(tot = sum(count))
+commute_df2 <- left_join(commute_df2, commute_tot, by = "residence")
+commute_df2 <- commute_df2 %>% mutate(prop = count/tot)
+commute_df2 <- commute_df2 %>% mutate(fips = as.integer(as.character(commute_df2$residence)) + 9000)
+
+
+gcounty_commute <- left_join(gcounty, commute_df2, by = "fips")
+gcounty_commute$samecounty <- as.integer(as.character(gcounty_commute$samecounty))
+ggplot(gcounty_commute %>% filter(is.na(prop) == FALSE & samecounty == 0)) +
+  geom_polygon(aes(long, lat, group = group, fill = prop)) +
+  geom_text(data = county_label, aes(x = avg_long, y = avg_lat, label = c_name)) +
+  scale_fill_gradientn(colours = brewer.pal(n=9, name = "YlGnBu"))
+ggsave("./EDA_images/121_commute_out_per_county.png")
+
+ggplot(gcounty_commute %>% filter(is.na(prop) == FALSE & samecounty == 1)) +
+  geom_polygon(aes(long, lat, group = group, fill = prop)) +
+  geom_text(data = county_label, aes(x = avg_long, y = avg_lat, label = c_name)) +
+  scale_fill_gradientn(colours = brewer.pal(n=9, name = "YlGnBu"))
+ggsave("./EDA_images/122_commute_win_per_county.png")
