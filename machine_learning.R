@@ -13,6 +13,9 @@ library(party)
 library(irr)
 library(klaR)
 library(ROCR)
+library(Boruta)
+library(caretEnsemble)
+library(gbm)
 
 # Capstone data
 # stops <- read.csv("E:/Learning/Springboard Intro to Data Science/capstone/CT_cleaned_edit.csv")
@@ -85,11 +88,19 @@ stops_split_edit$day_of_week <- factor(stops_split_edit$day_of_week)
   # -> stop_date
   # -> violation_raw
 stops_split_small <- stops_split_edit[, c(-1,-2, -7, -13, -30, -31, -33, -34, -36, -37)]
+stops_split_small_clustering <- stops_split_edit[, c(-1,-2, -13, -30, -31, -33, -34, -36, -37)]
+# (for clustering) 
+
 # -> making the right data type
 for (i in c(5, 7, 9, 11:25)){
   stops_split_small[[i]] <- as.factor(stops_split_small[[i]])
 }
 str(stops_split_small)
+
+for (i in c(6, 8, 10:26)){
+  stops_split_small_clustering[[i]] <- as.factor(stops_split_small_clustering[[i]])
+}
+str(stops_split_small_clustering)
 
 
 # NAs
@@ -235,6 +246,11 @@ prp(stops_arrest_treecv)
 train.smote <- SMOTE(is_arrested ~., data = train_arrest)
 tree.smote <- rpart(is_arrested ~ ., data = train.smote)
 prp(tree.smote)
+# branched on:
+# -> stop_duration
+# -> search_type
+# -> contraband_found
+# -> search_conducted
 
 #on training set
 pred.tree.smote <- predict(tree.smote, type = "class")
@@ -427,7 +443,7 @@ plot(ROCRperf2, colorize=TRUE, print.cutoffs.at=seq(0,0.1,by=0.01), text.adj=c(-
 
 
 # with RF
-stops_arrest_rf_penalty <- randomForest(is_arrested ~., data = train_arrest, ntree= 200, parms = list(loss = PenaltyMatrix))
+stops_arrest_rf_penalty <- randomForest(is_arrested ~., data = train_arrest, ntree= 100, parms = list(loss = PenaltyMatrix))
 PredictRFPenalty = predict(stops_arrest_rf_penalty, newdata = test_arrest, type = "class")
 confusionMatrix(table(test_arrest$is_arrested, PredictRFPenalty))
 # Kappa = 0.2757
@@ -754,6 +770,8 @@ confusionMatrix(table(test_arrest$is_arrested, pred.cart.penalty.ft))
 
 
 #### Feature selecting
+
+# Using caret package
 control_fs <- rfeControl(functions = rfFuncs,
                          method = "cv",
                          number = 10)
@@ -764,6 +782,70 @@ feature_selection_arrest <- rfe(is_arrested ~.,
                                 parms = list(loss = PenaltyMatrix))
 
 feature_selection_arrest
+# Recursive feature selection
+# 
+# Outer resampling method: Cross-Validated (10 fold) 
+# 
+# Resampling performance over subset size:
+#   
+#   Variables Accuracy   Kappa AccuracySD  KappaSD Selected
+# 4   0.9769 0.02836  0.0002335 0.024759         
+# 8   0.9776 0.12815  0.0003379 0.039314         
+# 16   0.9786 0.24313  0.0004580 0.022575         
+# 53   0.9790 0.26916  0.0002678 0.008903        *
+#   
+#   The top 5 variables (out of 53):
+#   stop_duration30+ min, stop_duration16-30 min, stop_hour_part_of_daytime_block2, stop_hour_part_of_daytime_block3, violation_raw_Other1
+
+
+
+#Using Boruta package
+set.seed(4567)
+boruta.train <- Boruta(is_arrested ~., data = train.smote, doTrace = 2)
+print(boruta.train)
+# Boruta performed 72 iterations in 2.604015 hours.
+# 27 attributes confirmed important: contraband_found, county_name,
+# day_of_week, driver_age, driver_gender and 22 more;
+# No attributes deemed unimportant.
+getSelectedAttributes(boruta.train, withTentative = F)
+
+plot(boruta.train, xlab = "", xaxt = "n")
+lz<-lapply(1:ncol(boruta.train$ImpHistory),function(i)
+  boruta.train$ImpHistory[is.finite(boruta.train$ImpHistory[,i]),i])
+names(lz) <- colnames(boruta.train$ImpHistory)
+Labels <- sort(sapply(lz,median))
+axis(side = 1,las=2,labels = names(Labels),
+       at = 1:ncol(boruta.train$ImpHistory), cex.axis = 0.7)
+# Top five important variables:
+# -> violation_count
+# -> contraband_found
+# -> search_type
+# -> search_conducted
+# -> stop_duration
+
+
+
+
+### Running CART with Penalty Matrix only on dataset with top 5 variables
+stops_arrested_top <- stops_arrested[, c(5:10)]
+
+set.seed(133)
+spl_top = createDataPartition(stops_arrested_top$is_arrested, p = 0.75, list = FALSE)
+train_arrest_top = stops_arrested_top[spl_top,]
+test_arrest_top = stops_arrested_top[-spl_top,]
+
+stops_arrest_top_pm <- rpart(is_arrested ~., data = train_arrest_top, parms = list(loss = PenaltyMatrix))
+prp(stops_arrest_top_pm)
+
+predict_top_pm = predict(stops_arrest_top_pm, newdata = test_arrest_top, type = "class")
+confusionMatrix(table(test_arrest_top$is_arrested, predict_top_pm))
+# Kappa = 0.3407
+roc.curve(test_arrest_top$is_arrested, predict_top_pm)
+# -> 0.667
+
+# => not much improvement over other methods
+
+
 
 
 #-----------------------------------------------------------------------
@@ -1132,6 +1214,145 @@ roc.curve(test_arrest12$is_arrested, pred.rf.smote12)
 
 
 
+
+#-------------------------------------------------------------------------
+##### Ensemble algorithm: stacking CART, RF, and NB
+
+# attempt 1
+
+control <- trainControl(method="cv", number=10, savePredictions= 'final', classProbs=TRUE)
+algorithmList <- c('rpart', 'rf', 'nb')
+set.seed(6875)
+
+models <- caretList(is_arrested~., 
+                    data=train_arrest, 
+                    trControl=control, 
+                    methodList=algorithmList,
+                    parms = list(loss = PenaltyMatrix))
+# models <- caretList(is_arrested~., 
+#                     data=train_arrest, 
+#                     trControl=control, 
+#                     methodList=algorithmList,
+#                     parms = list(loss = PenaltyMatrix))
+# models <- caretList(is_arrested~., 
+#                     data=train_arrest, 
+#                     trControl=control, 
+#                     methodList=algorithmList,
+#                     parms = list(loss = PenaltyMatrix),
+#                     tuneList = list(
+#                       rf1=caretModelSpec(model="rf", tuneGrid=data.frame(mtry=3))
+#                     ))
+# models <- caretList(is_arrested~., 
+#                     data=train_arrest, 
+#                     trControl=control, 
+#                     methodList=algorithmList)
+
+
+results <- resamples(models)
+summary(results)
+dotplot(results)
+
+
+
+# attempt 2
+#train_arrest_ensemble <- train_arrest_smote
+train_arrest_ensemble <- train_arrest
+test_arrest_ensemble <- test_arrest
+train_arrest_ensemble$rf_ensemble <- predict(stops_arrest_rf_penalty, type = "prob")[,2]
+test_arrest_ensemble$rf_ensemble <- predict(stops_arrest_rf_penalty, newdata = test_arrest, type = "prob")[,2]
+# train_arrest_ensemble$rf_ensemble_train <- predict(model.smote.rf, type = "prob")[,2]
+# test_arrest_ensemble$rf_ensemble_test <- predict(model.smote.rf, newdata = test_arrest, type = "prob")[,2]
+train_arrest_ensemble$cart_ensemble <- predict(cart.penalty.ft, type = "prob")[,2]
+test_arrest_ensemble$cart_ensemble <- predict(cart.penalty.ft, newdata = test_arrest, type = "prob")[,2]
+
+predictors_top <- c('rf_ensemble', 'cart_ensemble')
+# predictors_top <- c('rf_ensemble_train', 'cart_ensemble_train')
+# predictors_top_test <- c('rf_ensemble_test', 'cart_ensemble_test')
+
+model_glm <- train(train_arrest_ensemble[,predictors_top],train_arrest_ensemble[,'is_arrested'],
+                   method='glm',
+                   trControl=control)
+
+test_arrest_ensemble$glm_stacked <- predict(model_glm,
+                                            test_arrest_ensemble[,predictors_top])
+
+confusionMatrix(table(test_arrest_ensemble$is_arrested, test_arrest_ensemble$glm_stacked))
+# Kappa = 0.3125
+roc.curve(test_arrest_ensemble$is_arrested, test_arrest_ensemble$glm_stacked)
+# -> 0.605
+
+
+# redoing attempt 2 with all 3 models using Penalty Matrix
+# adding NB
+train_arrest_ensemble$nb_ensemble <- predict(stops_arrest_nb_penalty, newdata = train_arrest, type = "raw")[,2]
+test_arrest_ensemble$nb_ensemble <- predict(stops_arrest_nb_penalty, newdata = test_arrest, type = "raw")[,2]
+
+predictors_top2 <- c('rf_ensemble', 'cart_ensemble', 'nb_ensemble')
+model_glm2 <- train(train_arrest_ensemble[,predictors_top2],train_arrest_ensemble[,'is_arrested'],
+                   method='glm',
+                   trControl=control)
+
+test_arrest_ensemble$glm_stacked2 <- predict(model_glm2,
+                                            test_arrest_ensemble[,predictors_top2])
+
+confusionMatrix(table(test_arrest_ensemble$is_arrested, test_arrest_ensemble$glm_stacked2))
+# Kappa = 0.3178
+roc.curve(test_arrest_ensemble$is_arrested, test_arrest_ensemble$glm_stacked2)
+# -> 0.608
+
+
+# using CART instead of glm
+model_rpart <- train(train_arrest_ensemble[,predictors_top2],train_arrest_ensemble[,'is_arrested'],
+                    method='rpart',
+                    trControl=control)
+
+test_arrest_ensemble$rpart_stacked <- predict(model_rpart,
+                                             test_arrest_ensemble[,predictors_top2])
+
+confusionMatrix(table(test_arrest_ensemble$is_arrested, test_arrest_ensemble$rpart_stacked))
+# Kappa = 0.2637
+roc.curve(test_arrest_ensemble$is_arrested, test_arrest_ensemble$rpart_stacked)
+# -> 0.582
+
+
+
+# using gbm instead of glm
+model_gbm <- train(train_arrest_ensemble[,predictors_top2],train_arrest_ensemble[,'is_arrested'],
+                     method='gbm',
+                     trControl=control)
+
+test_arrest_ensemble$gbm_stacked <- predict(model_gbm,
+                                              test_arrest_ensemble[,predictors_top2])
+
+confusionMatrix(table(test_arrest_ensemble$is_arrested, test_arrest_ensemble$gbm_stacked))
+# Kappa = 0.3109
+roc.curve(test_arrest_ensemble$is_arrested, test_arrest_ensemble$gbm_stacked)
+# -> 0.601
+
+
+
+# Using majority vote instead of algorithm
+test_arrest_ensemble$rf_ensemble_class <- predict(stops_arrest_rf_penalty, newdata = test_arrest, type = "class")
+test_arrest_ensemble$cart_ensemble_class <- predict(cart.penalty.ft, newdata = test_arrest, type = "class")
+test_arrest_ensemble$nb_ensemble_class <- predict(stops_arrest_nb_penalty, newdata = test_arrest, type = "class")
+
+test_arrest_ensemble$pred_maj <- as.factor(ifelse(test_arrest_ensemble$rf_ensemble_class == "TRUE" & test_arrest_ensemble$cart_ensemble_class == "TRUE", "TRUE",
+                                           ifelse(test_arrest_ensemble$rf_ensemble_class == "TRUE" & test_arrest_ensemble$nb_ensemble_class == "TRUE", "TRUE",
+                                           ifelse(test_arrest_ensemble$cart_ensemble_class == "TRUE" & test_arrest_ensemble$nb_ensemble_class == "TRUE", "TRUE", "FALSE"))))
+
+
+confusionMatrix(table(test_arrest_ensemble$is_arrested, test_arrest_ensemble$pred_maj))
+# Kappa = 0.3331
+roc.curve(test_arrest_ensemble$is_arrested, test_arrest_ensemble$pred_maj)
+# -> 0.625
+
+# => no significant improvement from using ensemble stacking
+
+
+
+
+
+
 #----------------------------------------------------------
 #### stop_outcome
 
@@ -1200,8 +1421,7 @@ roc.curve(test_so2$stop_outcome_bucket, PredictCART_so2_smote)
 
 
 #-------------------------------------------------------------------------
-
-##### Work in progress...
+##### Clustering violation_raw column
 
 # Clustering to see if I can identify any trends for high factor variables
 # https://www.r-bloggers.com/clustering-mixed-data-types-in-r/
@@ -1219,3 +1439,105 @@ stops_arrest_custer3 <- stops_arrest_cluster2[,-3]
 gower_dist <- daisy(stops_arrest_custer3[,-8],
                     metric = "gower")
 #...can't get it to work, error: "Error: cannot allocate vector of size 378.3 Gb"
+
+
+
+# second attempt:
+gower_dist <- daisy(stops_arrested[,-8],
+                    metric = "gower")
+# => still nothing
+
+
+
+#### Trying K-modes
+#stops <- read.csv("E:/Learning/Springboard Intro to Data Science/capstone/CT_cleaned_edit.csv")
+#stops_reduced <- stops[,c(3,4,6,10,12,13,15,17,19,20,22,24,32)]
+
+### cleaning dataset for clustering:
+#driver_age
+med <- median(stops_split_small_clustering$driver_age, na.rm = TRUE)
+stops_split_small_clustering$driver_age[is.na(stops_split_small_clustering$driver_age) == TRUE] <- med
+#search_type
+stops_split_small_clustering$search_type <- factor(stops_split_small_clustering$search_type, levels = c(levels(stops_split_small_clustering$search_type), "None"))
+stops_split_small_clustering$search_type[(is.na(stops_split_small_clustering$search_type) == TRUE & stops_split_small_clustering$search_conducted == FALSE)] <- "None"
+stops_split_small_clustering$search_type[(is.na(stops_split_small_clustering$search_type) == TRUE)] <- "Other"
+# county_name
+stops_split_small_clustering$county_name[stops_split_small_clustering$county_name == ""] <- NA
+stops_split_small_clustering2 <- stops_split_small_clustering[!is.na(stops_split_small_clustering$stop_hour_part_of_day),]
+stops_split_small_clustering2 <- stops_split_small_clustering2[!is.na(stops_split_small_clustering2$county_name),]
+stops_split_small_clustering2 <- stops_split_small_clustering2[!is.na(stops_split_small_clustering2$is_arrested),]
+summary(stops_split_small_clustering2)
+stops_split_small_clustering3 <- stops_split_small_clustering2[, c(1:8, 10:12, 27:30)]
+
+
+#arrest_cluster <- kmodes(stops_arrested[,-8], 3, iter.max = 10, weighted = FALSE)
+ #-> The modes of the clusters have 0 for all violation 
+
+#arrest_cluster2 <- kmodes(stops_reduced[,-11], 3, iter.max = 10, weighted = FALSE)
+
+arrest_cluster3 <- kmodes(stops_split_small_clustering3[,-10], 3, iter.max = 10, weighted = FALSE)
+# => Clusters are identified by "Speed Related" and "Other", so try bucketing
+#    by those two
+
+cluster_output <- cbind(stops_split_small_clustering3, arrest_cluster3$cluster)
+cnames <- colnames(cluster_output)
+cnames[16] <- "cluster"
+colnames(cluster_output) <- cnames
+cluster_output2 <- cluster_output
+cluster_output2$cluster_viol <- vector(mode = "character", length = nrow(cluster_output2))
+cluster_output2$cluster_viol[cluster_output2$cluster == 1 | cluster_output2$cluster == 2] <- "Speed Related"
+cluster_output2$cluster_viol[cluster_output2$cluster == 3] <- "Other"
+
+
+# Run algorithm on results
+cluster_ds <- cluster_output2[, c(-5, -16)]
+
+set.seed(333)
+spl_cluster = createDataPartition(cluster_ds$is_arrested, p = 0.75, list = FALSE)
+train_cluster = cluster_ds[spl_cluster,]
+test_cluster = cluster_ds[-spl_cluster,]
+
+cluster_penalty_model <- rpart(is_arrested ~., data = train_cluster, parms = list(loss = PenaltyMatrix))
+prp(cluster_penalty_model)
+#print(stops_arrest_tree_penalty)
+predict_cluster_penalty = predict(cluster_penalty_model, newdata = test_cluster, type = "class")
+confusionMatrix(table(test_cluster$is_arrested, predict_cluster_penalty))
+# Kappa = 0.3322
+roc.curve(test_cluster$is_arrested, predict_cluster_penalty)
+# -> 0.686
+
+
+
+# Cluster with k = 10 to see if difference
+arrest_cluster10 <- kmodes(stops_split_small_clustering3[,-10], 10, iter.max = 10, weighted = FALSE)
+cluster_output10 <- cbind(stops_split_small_clustering3, arrest_cluster10$cluster)
+cnames10 <- colnames(cluster_output10)
+cnames10[16] <- "cluster"
+colnames(cluster_output10) <- cnames10
+cluster_output10_2 <- cluster_output10
+
+cluster_output10_2$cluster_viol <- vector(mode = "character", length = nrow(cluster_output10_2))
+cluster_output10_2$cluster_viol[cluster_output10_2$cluster == 1] <- "Cell Phone"
+cluster_output10_2$cluster_viol[cluster_output10_2$cluster == 2 | cluster_output10_2$cluster == 10] <- "Registration"
+cluster_output10_2$cluster_viol[cluster_output10_2$cluster == 3 | cluster_output10_2$cluster == 7] <- "Moving Violation"
+cluster_output10_2$cluster_viol[cluster_output10_2$cluster == 4 | cluster_output10_2$cluster == 5 | cluster_output10_2$cluster == 6] <- "Speed Related"
+cluster_output10_2$cluster_viol[cluster_output10_2$cluster == 8] <- "Other/Error"
+cluster_output10_2$cluster_viol[cluster_output10_2$cluster == 9] <- "Other"
+
+cluster_ds_10 <- cluster_output10_2[, c(-5, -16)]
+set.seed(3313)
+spl_cluster10 = createDataPartition(cluster_ds_10$is_arrested, p = 0.75, list = FALSE)
+train_cluster10 = cluster_ds_10[spl_cluster10,]
+test_cluster10 = cluster_ds_10[-spl_cluster10,]
+cluster_penalty_model10 <- rpart(is_arrested ~., data = train_cluster10, parms = list(loss = PenaltyMatrix))
+prp(cluster_penalty_model10)
+predict_cluster_penalty10 = predict(cluster_penalty_model10, newdata = test_cluster10, type = "class")
+confusionMatrix(table(test_cluster10$is_arrested, predict_cluster_penalty10))
+# Kappa = 0.3495
+roc.curve(test_cluster10$is_arrested, predict_cluster_penalty10)
+# -> 0.699
+
+# => Not significant improvement in Kappa and AUC values are better for other models
+
+
+
