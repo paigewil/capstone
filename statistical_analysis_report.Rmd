@@ -366,17 +366,17 @@ prop.test(x = as.vector(verbal_hr_combined [,4]), n = as.vector(verbal_hr_combin
 Conditions used in statistical analysis testing:
 
 * Chi-square independence test:
-    + Random: 	Since the data contains all stops for the specified time period, not just a selection, this is a random sample.
+    + Random: Since the data contains all stops for the specified time period, not just a selection, this is a random sample.
     + Expected values for each data point >=5 (R function verifies).
     + Independence:	Sample size <= 10% of population or sampling with replacement.
         - In 2014, there were 232,082 stops and that could include duplicate individuals. In 2014, the population of Connecticut was 3,591,873, making the sample size of our full year of data less than 10% of the population (232082/3591873 = ~6.46%) so we can claim independence. 
 * Two-sample z-test for proportions (same for proportion confidence interval):
     + Random: See above.
-    + Normal: 	At least 10 expected successes and failures each— the R functions used test for this condition, if it is not met, I don’t perform the test.
+    + Normal: At least 10 expected successes and failures each— the R functions used test for this condition, if it is not met, I don’t perform the test.
     + Independent: See above.
 * T-test for sample mean comparison:
     + Random: See above.
-    + Normal: 	Our sample size is >= 30 so using the central limit theorem, we can say our sampling distribution of the same mean is normal.
+    + Normal: Our sample size is >= 30 so using the central limit theorem, we can say our sampling distribution of the same mean is normal.
     + Independent: See above.
 
 Bucketing of stop outcomes:

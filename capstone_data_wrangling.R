@@ -403,6 +403,7 @@ df_clean %>% filter((is.na(is_arrested) == TRUE | stop_time == "0:00" | county_n
 # -> is_arrested: Since this is one of the variables I'd like to predict, it makes no sense to populate missing values.
 
 # Will be using:
-#   - search_type over search_type_raw
+#   - search_type_raw over search_type
 #   - driver_race_raw over driver_race
 #   - driver_age over driver_age_raw
+#   - violation_raw over violation

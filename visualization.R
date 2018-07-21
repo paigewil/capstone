@@ -1017,6 +1017,11 @@ ggplot(arrest_by_gender %>% filter(Arrested == TRUE |is.na(Arrested) == TRUE), a
   scale_fill_discrete(labels=c("Female","Male")) +
   annotate("text", x = 2.05, y = .026, label = "*Excludes Arrest Status = FALSE", size = 3, color = "#696969")
 ggsave("./EDA_images/63_gender_by_arrests_dodge_no_FALSE.png")
+ggplot(arrest_by_gender %>% filter(Arrested == TRUE), aes(Arrested, percent_gender, fill = Gender)) + 
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Arrest status proportion for each gender", x = "Arrest Status", y = "Proportion of gender") +
+  scale_fill_discrete(labels=c("Female","Male"))
+ggsave("./EDA_images/63_redo_gender_by_arrests_dodge_no_FALSE.png")
 # Notes: The dodge image more clearly shows that males who are stopped are more 
 #        likely to be arrested than females who are stopped.
 #        In fact, stopped men are arrested 1.5 times more than stopped women:
@@ -1093,6 +1098,16 @@ ggplot(race_by_arrest %>% filter(Arrested == TRUE | is.na(Arrested) == TRUE), ae
   scale_y_continuous(labels = scales::percent) +
   annotate("text", x = 2, y = .038, label = "*Excludes Arrest Status = FALSE", size = 3, color = "#696969")
 ggsave("./EDA_images/67_race_by_arrest_status_no_FALSE.png")
+ggplot(race_by_arrest %>% filter(Arrested == TRUE), aes(Arrested, percent_of_race, fill = Race)) + 
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Arrests/stops by race", x = "Arrest Status", y = "Percent of race") +
+  scale_fill_discrete(name = "Race") +
+  scale_y_continuous(labels = scales::percent)
+  # + annotate("text", x = 2, y = .038, label = "*Excludes Arrest Status = FALSE", size = 3, color = "#696969")
+ggsave("./EDA_images/67_redo_race_by_arrest_status_no_FALSE.png")
+race_test <- ggplot(race_by_arrest %>% filter(Arrested == TRUE), aes(Arrested, percent_of_race, fill = Race)) + geom_bar(stat = "identity", position = "dodge")
+plt_race_test <- ggplot_build(race_test)
+plt_race_test$data[[1]]
 ggplot(race_by_arrest, aes(Race, percent_of_race, fill = Arrested)) +
   geom_bar(stat = "identity", position = "dodge") +
   labs(title = "Arrest proportion for each race", y = "Arrests/stops") +
@@ -1583,6 +1598,17 @@ ggplot(sc_race2, aes(Race, prop, fill = Search_Conducted)) +
   geom_bar(stat = "identity", position = "dodge")
 
 
+
+search_conducted2 <- setNames(data.frame(table(df_clean$search_conducted, df_clean$contraband_found, df_clean$is_arrested, exclude = NULL)), c("Search_Conducted", "Contraband_Found", "Arrested", "count")) 
+search_conducted2_total <- search_conducted2 %>% group_by(Search_Conducted) %>% dplyr::summarise(total_count = sum(count))
+search_conducted2 <- left_join(search_conducted2, search_conducted2_total, by = "Search_Conducted")
+search_conducted2 <- search_conducted2 %>% mutate(arrests_to_pop = count/total_count)
+ggplot(search_conducted2 %>% filter(Search_Conducted == TRUE), aes(Contraband_Found, arrests_to_pop, fill = Arrested)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Ratio of arrests/stops by Contraband Found status \nfor Search Conducted = TRUE", x = "Contraband Found", y = "Arrests/Stops") +
+  scale_y_continuous(labels = scales::percent)
+ggsave("./EDA_images/81_additional_arrests_to_stops_search_conducted.png")
+
 # Notes: Most stops don’t end in arrest, regardless of whether a search was 
 #        conducted. However, if a search was conducted, there is 14.69 times more of 
 #        a chance the stop will end in an arrest than if there wasn’t a search 
@@ -1600,6 +1626,18 @@ ggplot(search_types, aes(Search_Type, arrests_to_pop, fill = Arrested)) +
   labs(title = "Ratio of arrests/stops by search type", x = "Search Type", y = "Arrests/Stops") +
   scale_y_continuous(labels = scales::percent)
 ggsave("./EDA_images/83_arrests_to_stops_search_type.png")
+
+search_types_raw <- setNames(data.frame(table(st_df$search_type_raw, st_df$is_arrested, exclude = NULL)), c("Search_Type", "Arrested", "count")) 
+search_types_raw_total <- search_types_raw %>% group_by(Search_Type) %>% dplyr::summarise(total_count = sum(count))
+search_types_raw <- left_join(search_types_raw, search_types_raw_total, by = "Search_Type")
+search_types_raw <- search_types_raw %>% mutate(arrests_to_pop = count/total_count)
+ggplot(search_types_raw, aes(Search_Type, arrests_to_pop, fill = Arrested)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Ratio of arrests/stops by search type", x = "Search Type", y = "Arrests/Stops") +
+  scale_y_continuous(labels = scales::percent) +
+  scale_x_discrete(labels = c("NA", "Consent", "Inventory", "Other"))
+ggsave("./EDA_images/83_redo_arrests_to_stops_search_type.png")
+
 ggplot(search_types %>% filter(Arrested == TRUE), aes(Search_Type, arrests_to_pop)) +
   geom_bar(stat = "identity", fill = "#1E90FF") +
   labs(title = "Ratio of arrests/stops by search type", x = "Search Type", y = "Arrests/Stops") +
@@ -1612,7 +1650,9 @@ search_types2 <- left_join(search_types2, search_types_total2, by = c("Search_Ty
 search_types2 <- search_types2 %>% mutate(arrests_to_pop = count/total_count)
 ggplot(search_types2, aes(Contraband_Found, arrests_to_pop, fill = Arrested)) +
   geom_bar(stat = "identity", position = "dodge") +
-  facet_grid(. ~ Search_Type)
+  facet_grid(. ~ Search_Type) +
+  labs(title = "Ratio of arrests/stops by Contraband Found and Search Type", x = "Contraband Found", y = "Arrests/Stops") +
+  scale_y_continuous(labels = scales::percent)
 ggsave("./EDA_images/84.2_arrests_to_stops_search_type_contraband.png")
 
 search_types3 <- setNames(data.frame(table(st_df$search_type, st_df$contraband_found, st_df$driver_race_raw,st_df$is_arrested, exclude = NULL)), c("Search_Type", "Contraband_Found", "Race","Arrested", "count")) 
@@ -1747,6 +1787,19 @@ ggplot(violations, aes(Violation, arrests_to_pop, fill = Arrested)) +
   geom_bar(stat = "identity", position = "dodge") +
   theme1
 ggsave("./EDA_images/89.3_arrests_to_stops_violation.png")
+
+
+st_split <- df_split3 %>% filter(search_type_raw == "Inventory")
+violations_st <- setNames(data.frame(table(st_split$violation_new, st_split$is_arrested, exclude = NULL)), c("Violation", "Arrested", "count")) 
+violations_st_total <- violations_st%>% group_by(Violation) %>% dplyr::summarise(total_count = sum(count))
+violations_st <- left_join(violations_st, violations_st_total, by = "Violation")
+violations_st <- violations_st %>% mutate(arrests_to_pop = count/total_count)
+ggplot(violations_st, aes(Violation, arrests_to_pop, fill = Arrested)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme1 +
+  labs(title = "Arrest Proportion for Inventory Violations", y = "Arrest/Stop") +
+  scale_y_continuous(labels = scales::percent)
+ggsave("./EDA_images/89.33_arrests_to_stops_inv_violation.png")
 
 ggplot(violations %>% filter(Arrested == TRUE), aes(Violation, arrests_to_pop)) +
   geom_bar(stat = "identity", position = "dodge", fill = "#56B4E9") +
@@ -2355,7 +2408,7 @@ gcounty_arrests <- left_join(gcounty, county_map_df, by = c("fips" = "region"))
 ggplot(gcounty_arrests %>% filter(is.na(value) == FALSE)) +
   geom_polygon(aes(long, lat, group = group, fill = value)) +
   geom_text(data = county_label, aes(x = avg_long, y = avg_lat, label = c_name)) +
-  scale_fill_gradientn(colours = brewer.pal(n=9, name = "YlGnBu"))
+  scale_fill_gradientn(colours = brewer.pal(n=9, name = "YlGnBu"), name = "Total Arrests")
   #scale_fill_gradient(low = "#56B1F7", high = "#132B43")
 ggsave("./EDA_images/112_arrests_per_county.png")
 
@@ -2390,7 +2443,7 @@ ggsave("./EDA_images/112.3_arrests_per_county_percent_of_pop.png")
 #tst <- gcounty_arrests %>% filter(is.na(value) == FALSE) %>% group_by(fips) %>% dplyr::summarise(n = n(), avg = mean(gcounty_arrests$lat), tot_lat = sum(lat), tot_long = sum(gcounty_arrests$long)) %>% dplyr::summarise(avg_lat = tot_lat/n, avg_lon = tot_long/n)
 county_label <- gcounty_arrests %>% filter(is.na(value) == FALSE) %>% group_by(fips) %>% dplyr::summarise(avg_lat = mean(lat), avg_long = mean(long))
 #county_label <- gcounty_arrests %>% filter(is.na(value) == FALSE) %>% group_by(fips) %>% dplyr::summarise(avg_lat = median(lat), avg_long = median(long))
-county_name <- df_clean %>% select(county_fips, county_name) %>% distinct()
+county_name <- df_clean %>% dplyr::select(county_fips, county_name) %>% distinct()
 county_label <- left_join(county_label, county_name, by = c("fips" = "county_fips"))
 county_label <- county_label %>% mutate(c_name = gsub(" County", "", county_name))
 
@@ -2459,14 +2512,14 @@ gcounty_miles <- left_join(gcounty, miles_df2, by = "fips")
 ggplot(gcounty_miles %>% filter(is.na(sum_interstate) == FALSE)) +
   geom_polygon(aes(long, lat, group = group, fill = sum_interstate)) +
   geom_text(data = county_label, aes(x = avg_long, y = avg_lat, label = c_name)) +
-  scale_fill_gradientn(colours = brewer.pal(n=9, name = "YlGnBu"))
+  scale_fill_gradientn(colours = brewer.pal(n=9, name = "YlGnBu"), name = "Total Miles")
   #scale_fill_gradient(low = "#56B1F7", high = "#132B43")
 ggsave("./EDA_images/117_interstate_miles_per_county.png")
 
 ggplot(gcounty_miles %>% filter(is.na(sum_freeway) == FALSE)) +
   geom_polygon(aes(long, lat, group = group, fill = sum_freeway)) +
   geom_text(data = county_label, aes(x = avg_long, y = avg_lat, label = c_name)) +
-  scale_fill_gradientn(colours = brewer.pal(n=9, name = "YlGnBu"))
+  scale_fill_gradientn(colours = brewer.pal(n=9, name = "YlGnBu"), name = "Total Miles")
   #scale_fill_gradient(low = "#56B1F7", high = "#132B43")
 ggsave("./EDA_images/118_freeway_miles_per_county.png")
 
