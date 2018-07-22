@@ -1,0 +1,654 @@
+---
+title: 'Introduction to Data Science Capstone Project: <br />An Analysis of Connecticut
+  State Police Traffic Stops'
+author: "Paige Williams"
+output:
+  md_document:
+    variant: markdown_github
+  html_document: default
+  pdf_document: default
+  word_document: default
+bibliography: bibliography.bibtex
+---
+
+### Problem
+In recent years, there has been a growing spotlight on the interactions between police and citizens, causing many protests throughout the country and poor relationships with law enforcement. In an effort to provide an objective understanding, this project will use machine learning to investigate what factors, if any, predict which traffic stops end in arrest. And, which, if any, of those factors are demographic, possibly contributing to the issue of police profiling.
+
+
+### Client
+There are two possible clients who would benefit from the findings of this project:<br /> 
+
+1. Police departments seeking to identify areas of bias and improve community relationships.
+    + In an effort to confront implicit bias and learn strategies to combat it, many police departments, like the Madison Police Department [@youtube], have implemented police bias training programs. To further aid in this initiative, the findings from this project can help identify areas of improvement for a specific department so the training can be catered and relevant. The self-reflection and acknowledgement of shortcomings also provides law enforcement the opportunity to reach out to affected communities and work to better relationships, something the MPD has already started doing [@vetterkind_2015].
+2. General public/ government groups seeking to investigate and hold offending police departments accountable.
+    + With public scrutiny mounting, having an objective perspective on the offenses of police departments is important for transparency and truth. The project findings also help provide such groups with a way to form a list of departments to focus efforts on. The Justice Department’s Office of Community Oriented Policing Services (COPS) and civil rights division [@barrett_2017] partake in a number of initiatives to investigate and report on police departments failings as well as provide training. The work from this project could be used by those programs, and others similar, as an additional tool to help effectively and efficiently complete inquiries.  
+    
+Overall, the analysis from this project can provide police, government groups, and concerned citizens with an objective perspective of the possible biases within departments (particularly, with this use case, the Connecticut State Police). This knowledge can help with investigation efforts and inform necessary improvement actions. 
+
+#### Cost: 
+The cost of these trainings can be expensive (\$4.5 million for the NYPD [@dimon_parascandola_2018] and \$100-\$300 per officer per day for 3 days to several weeks for another [@neuhauser_2016]), so having a clear understanding of a police department's biases will make the training more tailored and effective, ensuring the best investment.
+
+More than the cost of the training, the hours required, as enumerated above, add an additional cost in terms of time away from officers performing their regular policing duties.
+
+Additionally, the analytical techniques utilized in this project provide efficiency to the work of the governmental departments, allowing for both a wider reach to more police departments and a deeper analysis of those they investigate.
+
+### Data
+The data I will be using comes from [The Stanford Open Policing Project](https://openpolicing.stanford.edu/) [@2017arXiv170605678P] and contains information on traffic stops throughout the United States. For this project, I will be focusing on data from Connecticut since, compared to other states, it includes more features for analysis. In total, the dataset contains 24 features across 318,669 observations (traffic stops), covering the time period from 10/1/2013 through 3/31/2015. The features are largely categorical, including information such as the driver's gender and race, county of stop, if a search was conducted, and resulting violations. The dataset has been standardized from the raw data provided by the [Connecticut Data Collaborative](http://ctrp3.ctdata.org/rawdata/) and  includes some new fields, including a unique ID for each stop, county information (name and FIPS ([Federal Information Processing Standard codes](https://en.wikipedia.org/wiki/Federal_Information_Processing_Standards)) codes, which are standard codes used by the US goverment), and stop duration.
+
+In the analysis, focused will be placed on the demographic factors since implicit bias regarding specific groups is a problem this project would like to help uncover. The feature, is_arrested, will be the outcome variable because it is "worst" of the outcomes of the stop_outcome variable, so is of most interest in terms of bias effect.
+
+Additionally, to conduct an accurate analysis, I will need to calculate proportions of total demographic population for many of the features. I will be using a [2014 US Census Bureau dataset](https://www.census.gov/data/datasets/2016/demo/popest/counties-detail.html#tables) [@us_census_bureau] to pull the necessary denominators for demographic population proportions of gender, age, and race. 
+
+Other external datasets might be incorporated for comparison as needed depending on what the data unveils and what questions arise. 
+
+Dataset header:
+```{r, echo = FALSE, warning = FALSE, results = 'hide', message = FALSE}
+#df_clean <- read.csv("E:/Learning/Springboard Intro to Data Science/capstone/CT_cleaned_edit.csv")
+df_clean <- read.csv("E:/Learning/Springboard Intro to Data Science/capstone/CT_cleaned.csv", stringsAsFactors = FALSE)
+library(knitr)
+library(kableExtra)
+```
+
+```{r, echo = FALSE, message = FALSE}
+dt <- head(df_clean)
+#kable(dt, "html")
+dt %>%
+  kable("html") %>%
+  kable_styling() %>% 
+  scroll_box(width = "900px", height = "400px")
+```
+
+#### Limitations: 
+The data is comprised largely of categorical variables, restricting the machine learning algorithms and measures, like correlation, available for use. Ideally, there would be more features describing aspects of the stopped individual, like the car make and color, because those features shouldn't be the cause of a traffic stop, so any trends indicating they are would need to be reported on. 
+
+One particular issue addressed in this project is that the demographic spread of predictor variables in the dataset don't necessarily align with the state/county demographic spread, altering perception of a characteristic’s influence on arrest status. Therefore, where appropriate, weights are applied to each demographic characteristic by its distribution in the total population (Connecticut and/or county). Additionally, the dataset does not cover complete calendar years, reporting only part of 2013 and 2015. For summary time analysis, weights are applied, for example, to account for April only appearing in 2014 while March appears in 2014 and 2015. 
+
+An important point to highlight is that the analysis cannot determine if a feature causes an arrest, it can only show correlation between one feature and another. Further investigation on the part of the police department would be necessary to determine cause and effect.
+
+#### Cleaning and wrangling:
+Cleaning and wrangling the data was completed throughout the many investigation stages, as needed. However, the immediate and obvious fixes were addressed in the beginning of the project and are enumerated below.
+
+Many features were not in the correct format, so needed to be cast to allow for easier analysis and visualization. 
+
+For example, the date fields, were updated from factors to dates:
+```{r, message = FALSE}
+class(df_clean$stop_date)
+df_clean$stop_date <- as.POSIXct(df_clean$stop_date, format = "%m/%d/%Y")
+```
+
+And stop_duration was made into an ordered factor:
+```{r, message = FALSE}
+df_clean$stop_duration_fact <- factor(df_clean$stop_duration, order = TRUE)
+```
+
+There are a number of blank values throughout the dataset. Blank values in county_name and county_fips were updated based on investigation of the raw text column, fine_grained_location:
+```{r, message = FALSE}
+library(dplyr)
+library(tidyr)
+# rocky neck:
+df_clean %>% filter(grepl(pattern = "*rocky neck*", x = tolower(fine_grained_location))) %>% select(fine_grained_location, county_name) %>% distinct(county_name)
+# -> distinct county is New London County
+# -> Google search indicates it's a state park in New London
+
+# Figure out the corresponding FIP
+df_clean %>% filter(county_name == "New London County") %>% select(county_fips) %>% distinct()
+# -> 9011
+# update county_name and county_fips for "rocky neck" matches
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*rocky neck*", x = tolower(fine_grained_location)), "New London County"),
+                          county_fips = replace(county_fips, county_name == "New London County" & is.na(county_fips), 9011))
+```
+
+Follow same process for other unique texts in fine_grained_location:
+```{r, message = FALSE}
+# update matches for "east lyme"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*east lyme*", x = tolower(fine_grained_location)), "New London County"),
+                                county_fips = replace(county_fips, county_name == "New London County" & is.na(county_fips), 9011))
+# update matches for "37 hov" with FIP 9003 and county name Hartford County
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*37 hov*", x = tolower(fine_grained_location)), "Hartford County"),
+                                county_fips = replace(county_fips, county_name == "Hartford County" & is.na(county_fips), 9003))
+# update matches for "niantic"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*niantic*", x = tolower(fine_grained_location)), "New London County"),
+                                county_fips = replace(county_fips, county_name == "New London County" & is.na(county_fips), 9011))
+# update matches for "terminal"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*terminal*", x = tolower(fine_grained_location)), "Hartford County"),
+                                county_fips = replace(county_fips, county_name == "Hartford County" & is.na(county_fips), 9003))
+# update matches for "I-95 sb 43"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*i-95 sb 43*", x = tolower(fine_grained_location)), "New Haven County"),
+                                county_fips = replace(county_fips, county_name == "New Haven County" & is.na(county_fips), 9009))
+#update matches for "rt 6/195"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*rt 6/195*", x = tolower(fine_grained_location)), "Tolland County"),
+                                county_fips = replace(county_fips, county_name == "Tolland County" & is.na(county_fips), 9013))
+# update matches for "schoeph"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*schoeph*", x = tolower(fine_grained_location)), "Hartford County"),
+                                county_fips = replace(county_fips, county_name == "Hartford County" & is.na(county_fips), 9003))
+# update matches for "e litchfield rd"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*e litchfield rd*", x = tolower(fine_grained_location)), "Litchfield County"),
+                                county_fips = replace(county_fips, county_name == "Litchfield County" & is.na(county_fips), 9005))
+# update matches for "T130"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*t130*", x = tolower(fine_grained_location)), "New Haven County"),
+                                county_fips = replace(county_fips, county_name == "New Haven County" & is.na(county_fips), 9009))
+# update matches for "RT 229 @ RT 72"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*rt 229 @ rt 72*", x = tolower(fine_grained_location)), "Hartford County"),
+                                county_fips = replace(county_fips, county_name == "Hartford County" & is.na(county_fips), 9003))
+#update matches for "i84 exit 9"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*i84 exit 9*", x = tolower(fine_grained_location)), "Fairfield County"),
+                                county_fips = replace(county_fips, county_name == "Fairfield County" & is.na(county_fips), 9001))
+# update matches for "liberty way"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*liberty way*", x = tolower(fine_grained_location)), "New London County"),
+                                county_fips = replace(county_fips, county_name == "New London County" & is.na(county_fips), 9011))
+# update matches for "rt 8 n ext 23"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*rt 8 n ext 23*", x = tolower(fine_grained_location)), "New Haven County"),
+                                county_fips = replace(county_fips, county_name == "New Haven County" & is.na(county_fips), 9009))
+# update matches for "i-91 south exit 4"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*i-91 south exit 4*", x = tolower(fine_grained_location)), "New Haven County"),
+                                county_fips = replace(county_fips, county_name == "New Haven County" & is.na(county_fips), 9009))
+# update matches for "rt 172"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*rt 172*", x = tolower(fine_grained_location)), "New Haven County"),
+                                county_fips = replace(county_fips, county_name == "New Haven County" & is.na(county_fips), 9009))
+# update matches for "91n x 34"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*91n x 34*", x = tolower(fine_grained_location)), "Hartford County"),
+                                county_fips = replace(county_fips, county_name == "Hartford County" & is.na(county_fips), 9003))
+# update matches for "main t045"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*main t045*", x = tolower(fine_grained_location)), "New London County"),
+                                county_fips = replace(county_fips, county_name == "New London County" & is.na(county_fips), 9011))
+# update matches for "91 n x 36"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*91 n x 36*", x = tolower(fine_grained_location)), "Hartford County"),
+                                county_fips = replace(county_fips, county_name == "Hartford County" & is.na(county_fips), 9003))
+# update matches for "fern"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*fern*", x = tolower(fine_grained_location)), "Litchfield County"),
+                                county_fips = replace(county_fips, county_name == "Litchfield County" & is.na(county_fips), 9005))
+# update matches for "nb south of exit 15" 
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*nb south of exit 15*", x = tolower(fine_grained_location)), "New Haven County"),
+                                county_fips = replace(county_fips, county_name == "New Haven County" & is.na(county_fips), 9009))
+#update matches for "x 64"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*x 64*", x = tolower(fine_grained_location)), "Middlesex County"),
+                                county_fips = replace(county_fips, county_name == "Middlesex County" & is.na(county_fips), 9007))
+#update matches for "post road fairfield"
+df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name == "" & grepl(pattern = "*post road fairfield*", x = tolower(fine_grained_location)), "Fairfield County"),
+                                county_fips = replace(county_fips, county_name == "Fairfield County" & is.na(county_fips), 9001))
+# -> no other groups (patterns that appear more than once) to investigate-- 16 blank county_names left
+```
+
+There were a number of variables with both a "raw" and "non-raw" column:
+
+For driver_age and driver_age_raw, The Stanford Open Policing Project made ages <15 blank in the driver_age column, which I made NA for easier filtering. It is a fairly logical assumption that ages < 15 were made in error, since in the US, one can't get their driver's permit until they're 15, so the driver_age column was used throughout the rest of the analysis. Furthermore, the logic was extended to make older ages (>=80) NA, also under the assumption they were made in error because it doesn't seem reasonable to have many 80+ year old drivers.
+
+```{r, message = FALSE}
+df_clean <- df_clean %>% mutate(driver_age = replace(driver_age, driver_age == "", NA))
+
+df_clean <- df_clean %>% mutate(driver_age = replace(driver_age, driver_age >= 80, NA))
+```
+
+In the driver_race column, races in driver_race_raw are bucketed into an "other" column. This was done by The Stanford Open Policing Project to [standardize driver race](https://github.com/5harad/openpolicing/blob/master/DATA-README.md) throughout the states, but since we're only investigating one state, to avoid loss of information, driver_race_raw will be used. 
+
+There was no distinct difference between the columns, search_type_raw and search_type or violation and violation_raw, so search_type_raw and violation_raw will be used, keeping the information of the original Connecticut data.
+
+To make for easier filtering, blanks are changed to NAs in search_type_raw:
+```{r, message = FALSE}
+df_clean <- df_clean %>% mutate(search_type = replace(search_type, search_type == "", NA))
+```
+
+The violation_raw has many distinct values because it is a comma-delineated list of all the violations for a traffic stop. Two steps were completed to make sense of the data housed in violation_raw. The first, was making a violation_count column. 
+
+```{r, results = 'hide', message = FALSE}
+library(stringr)
+library(splitstackshape)
+dist_viol_raw <- df_clean %>% arrange(violation_raw) %>% select(violation_raw) %>% distinct()
+# first: determine max violations for a stop
+no_viols <- str_count(dist_viol_raw, ",")
+max(no_viols) + 1
+# 5 -> = number of new columns to create
+# second: create # of violations column 
+df_clean <- df_clean %>% mutate(violation_count = str_count(violation_raw, ",") + 1)
+```
+
+And the second task was making a new data set with one-hot encoded columns, one for every violation, where a 1 indicates the stop had that violation, and a 0 means it did not. A new data set was created to avoid needing to use a bloated dataset for all calculations. Instead, this new dataset will be used only when violations are investigated.
+
+```{r, message = FALSE}
+df_split <- df_clean
+df_split <- cSplit_e(df_split, "violation_raw", ",", mode = "binary", type = "character", fill = 0)
+```
+
+There are some leftover NA values which will be addressed as needed. For the visualization and statistics investigation, NAs were ignored. For the machine learning investigation, NAs were handled more carefully, as enumerated in the machine learning section. Here are the columns with missing values:
+
+* stop_time: 222
+* county_name: 38
+* driver_age: 274
+* search_type: 313823
+* stop_outcome: 5356
+* is_arrested: 5356
+
+_\*For more on the data cleaning and wrangling process, see the R script in GitHub, [here](https://github.com/paigewil/capstone/blob/master/capstone_data_wrangling.R)._
+
+### Exploratory Data Analysis (Visualizations and Statistics)
+
+#### Summary:
+
+All the attributes tested against is_arrested had statistically significant results, meaning all of the attributes significantly contribute to the arrest outcome of a stop. For some attributes, this makes more intuitive sense than others. For example, attributes that describe the stop, like stop duration, search type, search conducted, and violation are obviously going to relate to the stop outcome. However, characteristics of the driver; gender, race, and age also influence arrest status.
+<br />
+<br />
+For completion of understanding, here is a list of all the attributes tested:
+
+* driver_gender
+* driver_race_raw
+* driver_age
+* county_name
+* search_conducted
+* search_type
+* contraband_found
+* stop_duration
+* violation_count
+* violation
+* stop_time_hour
+* day_of_week
+* day_of_month
+* month_year
+
+Below will highlight a few of the more important attributes. However, the methods used were applied to all the attribute investigations in a similar fashion. 
+<br />
+<br />
+The conventional significance level for social sciences is 0.05 [@perezgonzalez_2011], which is what will be used here.
+
+#### Bivariate analysis:
+```{r, echo = FALSE, warning = FALSE, results = 'hide', message = FALSE}
+library(ggplot2)
+library(lubridate)
+library(plyr)
+library(ggpubr)
+library(gridExtra)
+library(maps)
+library(choroplethr)
+library(choroplethrMaps)
+library(RColorBrewer)
+library(corrplot)
+library(gplots)
+
+df_clean <- read.csv("E:/Learning/Springboard Intro to Data Science/capstone/CT_cleaned_edit.csv")
+df_split <- read.csv("E:/Learning/Springboard Intro to Data Science/capstone/CT_cleaned_split.csv")
+
+census <- read.csv("E:/Learning/Springboard Intro to Data Science/capstone/cc-est2016-alldata-09.csv")
+census$COUNTY <- as.integer(census$COUNTY + 9000)
+names(census)[3] <- "county_fips"
+
+census <- census %>% filter(YEAR == 7)
+census_county <- census %>% filter(AGEGRP == 0)
+
+df_county <- left_join(df_clean, census_county, by = "county_fips")
+census_agegrp <- census %>% group_by(AGEGRP) %>% dplyr::summarise_at(vars(TOT_POP:HNAC_FEMALE), sum)
+census_whole_state <- census %>% filter(AGEGRP == 0) %>% group_by(STATE, STNAME) %>% dplyr::summarise_at(vars(TOT_POP:HNAC_FEMALE), sum)
+
+theme1 <- theme(axis.text.x=element_text(angle=90, hjust=1))
+```
+
+##### Stop Duration:
+By looking at the plot below, it becomes clear that the percent of stops that end in arrest increases as the stop durations increase in time length. This makes intuitive sense because, naturally the arresting process will take longer. 
+
+Our visual analysis is cemented with statistical testing. We see that the  greater proportion of arrests/stops in the 30+ time bucket is likely not due to chance as well as no independence between stop duration and arrest status.
+
+```{r, echo = FALSE, message = FALSE}
+stop_durations <- setNames(data.frame(table(df_clean$stop_duration, df_clean$is_arrested, exclude = NULL)), c("Stop_Duration", "Arrested", "count")) 
+stop_durations_total <- stop_durations%>% group_by(Stop_Duration) %>% dplyr::summarise(total_count = sum(count))
+stop_durations <- left_join(stop_durations, stop_durations_total, by = "Stop_Duration")
+stop_durations <- stop_durations %>% mutate(arrests_to_pop = count/total_count)
+ggplot(stop_durations, aes(Stop_Duration, arrests_to_pop, fill = Arrested)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Arrest status distribution per stop duration", x = "Stop Duration", y = "Arrests/stops") +
+  scale_y_continuous(labels = scales::percent)
+```
+
+```{r, message = FALSE}
+# -> chi-square test for independence
+sd_arrest_chi <- table(df_clean$stop_duration, df_clean$is_arrested, useNA = "ifany")
+chisq16 <- chisq.test(sd_arrest_chi)
+chisq16
+
+# -> Is the difference between the arrest/stop proportion of 30+ stop durations
+# and the other durations statistically significant?
+sd_arrest_chi <- addmargins(table(df_clean$stop_duration, df_clean$is_arrested, useNA = "ifany"))
+sd_30 <- sd_arrest_chi[3,]
+sd_not_30 <- colSums(sd_arrest_chi[c(1:2),])
+sd_30_not_30 <- rbind(sd_30, sd_not_30)
+res30 <- prop.test(x = as.vector(sd_30_not_30[,2]), n = as.vector(sd_30_not_30[,4]), alternative = "greater")
+res30
+```
+
+##### Search Conducted:
+While most stops where a search was conducted don’t end in arrest, there are 14.69 times more searches conducted for stops that do end in arrest. With a two-proportion z-test giving a p-value of 2.2e-16, we verify this result is statistically significant.
+
+Additionally, from the chi-square independence test we get a p-value of 2.2e-16 showing that search conducted and arrest status are dependent.
+
+```{r, echo = FALSE, message = FALSE}
+searches_conducted <- setNames(data.frame(table(df_clean$search_conducted, df_clean$is_arrested, exclude = NULL)), c("Search_Conducted", "Arrested", "count")) 
+searches_total <- searches_conducted %>% group_by(Search_Conducted) %>% dplyr::summarise(total_count = sum(count))
+searches_conducted <- left_join(searches_conducted, searches_total, by = "Search_Conducted")
+searches_conducted<- searches_conducted %>% mutate(arrests_to_pop = count/total_count)
+ggplot(searches_conducted, aes(Search_Conducted, arrests_to_pop, fill = Arrested)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Ratio of arrests/stops by search conducted", x = "Search Conducted", y = "Arrests/Stops") +
+  scale_y_continuous(labels = scales::percent)
+```
+
+```{r, message = FALSE}
+# -> chi-square test for independence
+sc_arrest_chi <- table(df_clean$search_conducted, df_clean$is_arrested, useNA = "ifany")
+chisq11 <- chisq.test(sc_arrest_chi)
+chisq11
+
+# -> 2-sample test to compare proportions
+# Is search conducted == TRUE > search conducted == FALSE?
+sc_arrest_ft <- addmargins(table(df_clean$search_conducted, df_clean$is_arrested, useNA = "ifany"))
+sc_arrest_ft <- sc_arrest_ft[c(2,1),]
+res19 <- prop.test(x = as.vector(sc_arrest_ft[,2]), n = as.vector(sc_arrest_ft[,4]), alternative = "greater")
+res19
+```
+
+These results seem to indicate that while having a search conducted during a stop does not lead to an arrest a majority of the time, those stops that do end in arrest are most likely to have had a search conducted. This is not too concerning of a result because a search conducted does not mean contraband was found. However, it might lead you to question whether most of the stops where a search was conducted and there was no arrest resulted in the search coming up empty-handed. A dive into the contraband_found variable, leads to some interesting results.
+
+##### Contraband Found:
+
+In the image below, we see that most stops where contraband was found don't end in arrest. 
+```{r, echo = FALSE, message = FALSE}
+st_df <- df_clean %>% filter(search_conducted == TRUE)
+contraband <- setNames(data.frame(table(st_df$contraband_found, st_df$is_arrested, exclude = NULL)), c("Contraband", "Arrested", "count"))
+contraband_total <- contraband %>% group_by(Contraband) %>% dplyr::summarise(total_count = sum(count))
+contraband <- left_join(contraband, contraband_total, by = "Contraband")
+contraband <- contraband %>% mutate(arrests_to_pop = count/total_count)
+ggplot(contraband, aes(Contraband, arrests_to_pop, fill = Arrested)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Arrest Status distribution per contraband found status", y = "Arrests/stops") +
+  scale_y_continuous(labels = scales::percent)
+```
+
+In the summer of 2015, after the time period of this dataset, the drug possession crime sentences were reduced to misdemeanors in Connecticut. Additionally, in 2011, Connecticut "decriminalized small amounts of marijuana" [@collins_2015]. The high proportion of non-arrests for stops where contraband is found might mean either officers are not enforcing the law appropriately or a large number of the contraband found was small amounts of marijuana or another misdemeanor contraband. This is a good example of the desirability for more granular data, in this case, a feature explaining the contraband that was found. Ultimately, with the data available, it is difficult to know if these results indicate police behavior that needs investigation or a confirmation of proper law enforcement.
+
+##### Search Type:
+Most of the inventory searches were from a stop that had an arrest while all other search types mostly were not. Inventory searches are those that are conducted on impounded vehicles [@inventory] and many vehicles can be impounded in Connecticut after arrest for driving with a suspended license or under the influence [@frisman_2009], making the large percentage of arrests for inventory searches logical.
+
+```{r, echo = FALSE, message = FALSE}
+search_types_raw <- setNames(data.frame(table(st_df$search_type_raw, st_df$is_arrested, exclude = NULL)), c("Search_Type", "Arrested", "count")) 
+search_types_raw_total <- search_types_raw %>% group_by(Search_Type) %>% dplyr::summarise(total_count = sum(count))
+search_types_raw <- left_join(search_types_raw, search_types_raw_total, by = "Search_Type")
+search_types_raw <- search_types_raw %>% mutate(arrests_to_pop = count/total_count)
+ggplot(search_types_raw, aes(Search_Type, arrests_to_pop, fill = Arrested)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Ratio of arrests/stops by search type", x = "Search Type", y = "Arrests/Stops") +
+  scale_y_continuous(labels = scales::percent) +
+  scale_x_discrete(labels = c("NA", "Consent", "Inventory", "Other"))
+```
+
+A plot of arrest status for inventory violations confirms that many of the arrests and therefore, presumptively, impounds are for those violations. However, again, more detailed information is desirable to be more certain.
+```{r, echo = FALSE, message = FALSE}
+df_split3 <- df_split %>% gather("violation_new", "n", 'violation_raw_Cell.Phone':'violation_raw_Window.Tint')
+df_split3 <- df_split3 %>% filter(n != 0)
+st_split <- df_split3 %>% filter(search_type_raw == "Inventory")
+violations_st <- setNames(data.frame(table(st_split$violation_new, st_split$is_arrested, exclude = NULL)), c("Violation", "Arrested", "count")) 
+violations_st_total <- violations_st%>% group_by(Violation) %>% dplyr::summarise(total_count = sum(count))
+violations_st <- left_join(violations_st, violations_st_total, by = "Violation")
+violations_st <- violations_st %>% mutate(arrests_to_pop = count/total_count)
+ggplot(violations_st, aes(Violation, arrests_to_pop, fill = Arrested)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme1 +
+  labs(title = "Arrest Proportion for Inventory Violations", y = "Arrest/Stop") +
+  scale_y_continuous(labels = scales::percent)
+```
+
+Backing the visual observations with some statistics, there is 95% confidence interval of (0.7139833, 0.8214710) for the proportion of inventory searches that have arrests, indicating that since the whole interval is above 50%, we can be 95% confident that for the entire inventory search population, more are going to end in arrest than not.
+
+```{r, message = FALSE}
+df_search_conducted <- df_clean %>% filter(search_conducted == TRUE)
+st_arrest_ft <- addmargins(table(df_search_conducted$search_type_raw, df_search_conducted$is_arrested, useNA = "ifany"))
+st_arrest_ft <- head(st_arrest_ft,-1)
+inv <- st_arrest_ft[3,]
+# -> is it likely that if you have an inventory search you will also have 
+# an arrest?-- what is the confidence interval of values?
+inv_true <- inv[[2]]
+inv_n <- inv[[4]]
+prop.test(inv_true, inv_n)
+```
+
+Now that we've investigated features more closely related to the stop itself and seen that the results either align with our understanding of Connecticut law and policing or we need more information, let's investigate the impact of our demographic features on arrest status.
+
+##### Gender:
+From the bivariate plot breakdown on arrest/stop by gender, we see that males who are stopped are more likely to be arrested than females who are stopped. In fact, in this sample, stopped men are arrested 1.7 times more than stopped women: 0.02650022 / 0.01589189 = 1.667531.
+```{r, echo = FALSE, message = FALSE}
+ggplot(df_clean, aes(is_arrested, fill = driver_gender)) + 
+  geom_bar(aes(y = ..prop.., group = driver_gender), position = "dodge") +
+  labs(title = "Arrest status proportion for each gender", x = "Arrest Status", y = "Proportion") +
+  scale_fill_discrete(labels=c("Female","Male"), name = "Gender")
+
+#Zoomed in plot
+arrest_by_gender <- setNames(data.frame(table(df_clean$driver_gender, df_clean$is_arrested, exclude = NULL)), c("Gender", "Arrested", "count")) 
+gender_totals <- data.frame(arrest_by_gender %>% group_by(Gender) %>% dplyr::summarise(sum_gender = sum(count)))
+arrest_by_gender <- left_join(arrest_by_gender, gender_totals, by = "Gender")
+arrest_by_gender <- arrest_by_gender %>% mutate(percent_gender  = count/sum_gender)
+ggplot(arrest_by_gender %>% filter(Arrested == TRUE), aes(Arrested, percent_gender, fill = Gender)) + 
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Arrest status proportion for each gender", x = "Arrest Status", y = "Proportion of gender") +
+  scale_fill_discrete(labels=c("Female","Male"))
+```
+
+The two-proportion z-test comparing males' arrest rate to females' gives a p-value of 2.2e-16, allowing us the reject the null hypothesis and say that the difference in arrest rate is statistically signficiant.
+```{r, message = FALSE}
+addmargins(table(df_clean$driver_gender, df_clean$is_arrested, useNA = "ifany"))
+res4 <- prop.test(x = c(5615, 1697), n = c(211885, 106784), alternative = "greater")
+res4
+```
+
+##### Race:
+When weighted against the census Connecticut populations, Blacks and Whites have the highest number of stops.
+```{r, echo = FALSE, message = FALSE}
+census_race <- census_whole_state %>% select(1:5,
+                                             BAC_MALE, BAC_FEMALE,
+                                             WAC_MALE, WAC_FEMALE,
+                                             H_MALE, H_FEMALE,
+                                             IAC_MALE,IAC_FEMALE,
+                                             AAC_MALE, AAC_FEMALE) %>%
+                                      dplyr::mutate(Black = BAC_MALE + BAC_FEMALE,
+                                                    White = WAC_MALE + WAC_FEMALE,
+                                                    Hispanic = H_MALE + H_FEMALE,
+                                                    NativeAmerican = IAC_MALE + IAC_FEMALE,
+                                                    Asian = AAC_MALE + AAC_FEMALE)
+census_race <- census_race %>% select(-c(6:15))
+race_cols <- colnames(census_race)[6:10]
+census_race <- data.frame(t(census_race[,-(1:5)])) # removing non-race columns
+census_race$race <- race_cols
+census_race <- arrange(census_race, race)
+table_race <- setNames(data.frame(table(df_clean$driver_race_raw)),c("race", "count"))
+table_race <- bind_cols(table_race, census_race)
+temp_name <- colnames(table_race)
+temp_name[3] <- "total_pop" #rename weird column
+colnames(table_race) <- temp_name
+table_race <- table_race %>% mutate(pop_prop = count/total_pop)
+ggplot(table_race, aes(race, pop_prop)) +
+  geom_bar(stat = "identity", fill = "#56B4E9") +
+  theme1 +
+  labs(title = "Stop counts by race weighted by race population", x = "Race", y = "Weighted stop counts by race")
+```
+
+However, when looking at the proportion of arrests/stops, Hispanics and Blacks have the highest ratios. 
+```{r, echo = FALSE, message = FALSE}
+race_by_arrest <- setNames(data.frame(table(df_clean$driver_race_raw, df_clean$is_arrested, exclude = NULL)), c("Race", "Arrested", "count")) 
+race_totals <- data.frame(race_by_arrest %>% group_by(Race) %>% dplyr::summarise(sum_race = sum(count)))
+race_by_arrest <- left_join(race_by_arrest, race_totals, by = "Race")
+race_by_arrest <- race_by_arrest %>% mutate(percent_of_race  = count/sum_race)
+ggplot(race_by_arrest %>% filter(Arrested == TRUE), aes(Arrested, percent_of_race, fill = Race)) + 
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Arrests/stops by race", x = "Arrest Status", y = "Percent of race") +
+  scale_fill_discrete(name = "Race") +
+  scale_y_continuous(labels = scales::percent)
+```
+
+It is interesting to note that Hispanics are the third highest in terms of stop proportion when weighted by Census race population but have the highest arrest likelihood. This seems to anecdotally support the results seen here that race does impact arrest status outcome. In fact, the arrest/stop ratio of Hispanics is (0.03912443/0.02455756) = 1.593173 times more than the next highest ratio, which is the ratio for Blacks. With statistical tests, we see this result as being statistically signficant with a two-proportion z-test returning a p-value of 2.2e-16.
+```{r, message = FALSE}
+race_table <- table(df_clean$driver_race_raw, df_clean$is_arrested, useNA = "ifany")
+non_hispanic <- colSums(race_table[c(1,2,4,5),])
+race_table2 <- rbind(race_table, non_hispanic)
+race_table2 <- race_table2[c(3,6),]
+race_table2 <- addmargins(race_table2)
+race_table2 <- race_table2[c(1,2),]
+prop.test(x = as.vector(race_table2[,2]), n = as.vector(race_table2[,4]), alternative = "greater")
+```
+
+Additionally, we see that race and arrest status are not independent, with the chi-square independence test giving a p-value of 2.2e-16.
+```{r, message = FALSE}
+race_arrest_chi <- table(df_clean$driver_race_raw, df_clean$is_arrested, useNA = "ifany")
+chisq.test(race_arrest_chi)
+```
+
+##### Race and Age:
+Adding an extra layer into our analysis of race, let’s see if there is a difference in the mean age of arrest for each race.
+
+Looking at the boxplots, we can see that the mean age of arrest is lower for Black and Hispanic drivers. Note, NAs were excluded to compute the means.
+```{r, message = FALSE, warning = FALSE}
+ggboxplot(df_clean %>% filter(is_arrested == TRUE), x = "driver_race_raw", y = "driver_age", color = "driver_race_raw",
+          xlab = "Driver Race", ylab = "Driver Age")
+```
+
+Performing a t-test on the difference in mean ages of arrest for Hispanic and Black drivers versus the other races, confirms our observations, giving a p-value of 2.2e-16, meaning we favor the alternative hypothesis that says the mean age of arrest for Hispanics and Blacks is significantly less than the other races. 
+```{r, message = FALSE}
+df_clean$race2 <- vector(mode="character", length = nrow(df_clean))
+df_clean$race2[df_clean$driver_race_raw != "Hispanic" & df_clean$driver_race_raw != "Black"] <- "NonHB"
+df_clean$race2[df_clean$driver_race_raw == "Hispanic" | df_clean$driver_race_raw == "Black" ] <- "HB"
+t.test(driver_age ~ race2, data = df_clean %>% filter(is_arrested == TRUE), alternative = "less")
+```
+
+Overall, we see that demographic characteristics of drivers have a statistically significant difference on the arrest outcome of a traffic stop in Connecticut. Whether or not these demographics can accurately predict arrest status will be determined in the machine learning section. However, the significance is still important enough for the Conencticut State Police department to explore further, desirably with more detailed data.
+
+##### Over-time:
+In addition to demographics and stop characteristics, when an individual is stopped seems to have an effect on whether or not they’re arrested. 
+
+For example, we see that more arrests/stops occur on the weekend, a finding supported with the two-proportion z-tests comparing Saturday and Sunday to the other weekdays. To accomplish this analysis, more data wrangling was required, making a day_of_week variable.
+```{r, message = FALSE, warning = FALSE}
+df_clean$stop_date <- as.POSIXct(df_clean$stop_date, "%Y-%m-%d", tz = "America/New_York")
+df_clean$day_of_week <- weekdays(df_clean$stop_date)
+df_clean$day_of_week <- factor(df_clean$day_of_week, levels = c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"))
+arrests_per_day_of_week <- data.frame(df_clean %>% group_by(day_of_week, is_arrested) %>% dplyr::summarise(sum_arrests = n()))
+arrests_dow_total <- arrests_per_day_of_week %>% group_by(day_of_week) %>% dplyr::summarise(sum_count = sum(sum_arrests))
+arrests_per_day_of_week  <- left_join(arrests_per_day_of_week , arrests_dow_total, by = "day_of_week")
+arrests_per_day_of_week <- arrests_per_day_of_week %>% mutate(arrests_per_stop  = sum_arrests/sum_count)  
+ggplot(arrests_per_day_of_week %>% filter(is_arrested == TRUE), aes(day_of_week, arrests_per_stop)) +
+  geom_bar(stat = "identity", fill = "#1E90FF") +
+  labs(title = "% of stops that end in arrest by day of week", x = "Day of Week", y = "Arrests/stops") +
+  scale_y_continuous(labels = scales::percent)
+```
+
+```{r, message = FALSE, warning = FALSE}
+weekend <- addmargins(table(df_clean$day_of_week, df_clean$is_arrested, useNA = "ifany"))
+weekend <- head(weekend, -1)
+satsun <- colSums(weekend[c(1,7),])
+weekday <- colSums(weekend[c(2:6),])
+weekend2 <- rbind(satsun, weekday)
+# Testing arrest proportion of the weekend
+prop.test(x = as.vector(weekend2[,2]), n = as.vector(weekend2[,4]), alternative = "greater")
+```
+
+Some more temporal trends uncovered is the arrest/stop ratio tends to decrease towards the last 3rd of the month, the highest arrest/stop ratio occurs in the early morning (0000- 0300), and winter months seems to have the higher arrest/stop ratios.
+
+##### County:
+One more point of interest worth mentioning is the arrest/stop ratio per county. As we can see from the graph below, there are some large discrepancies between some of the counties.
+
+```{r, echo = FALSE, message = FALSE}
+county_by_arrest <- setNames(data.frame(table(df_clean$county_name, df_clean$is_arrested, exclude = NULL)), c("County", "Arrested", "count")) 
+county_totals <- data.frame(county_by_arrest %>% group_by(County) %>% dplyr::summarise(sum_county = sum(count)))
+county_by_arrest <- left_join(county_by_arrest, county_totals, by = "County")
+county_by_arrest <- county_by_arrest %>% mutate(percent_of_county  = count/sum_county)
+ggplot(county_by_arrest %>% filter(County != "" & Arrested == TRUE), aes(Arrested, percent_of_county, fill = County)) + 
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Ratio of arrests to stops by county", x = "", y = "Arrest/stop") +
+  scale_y_continuous(labels = scales::percent) +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank())
+```
+
+Comparing the freeway and interstate volume traffic per county to the total number of arrests per county, shows some positive correlation, showing that certain counties have more highways and therefore vehicles traveling through them, and explaining the differing arrest/stop ratios.
+
+The data for freeway and interstate traffic volume comes from [Connecticut Open Data](https://data.ct.gov/Transportation/2014-Daily-Vehicle-Miles-Travelled-By-Town-And-Roa/dpat-eygf) [@ct_open_data] and is from 2014 .
+
+Total arrests per county:
+
+```{r, echo = FALSE, message = FALSE}
+county_by_arrest_TRUE <- setNames(data.frame(table(df_clean$county_fips, df_clean$is_arrested, exclude = NULL)), c("County", "Arrested", "count")) 
+county_totals_TRUE <- data.frame(county_by_arrest_TRUE %>% group_by(County) %>% dplyr::summarise(sum_county = sum(count)))
+county_by_arrest_TRUE <- left_join(county_by_arrest_TRUE, county_totals_TRUE, by = "County")
+county_by_arrest_TRUE <- county_by_arrest_TRUE %>% mutate(percent_of_county  = count/sum_county)
+county_by_arrest_TRUE <- county_by_arrest_TRUE %>% filter(Arrested == TRUE, is.na(County) != TRUE)
+county_map_df <- data.frame(region = as.integer(as.character(county_by_arrest_TRUE$County)),
+                            value = county_by_arrest_TRUE$count)
+
+gcounty <- map_data("county")
+gcounty <- mutate(gcounty, polyname = paste(region, subregion, sep = ","))
+gcounty <- left_join(gcounty, county.fips, "polyname")
+gcounty_arrests <- left_join(gcounty, county_map_df, by = c("fips" = "region"))
+county_label <- gcounty_arrests %>% filter(is.na(value) == FALSE) %>% group_by(fips) %>% dplyr::summarise(avg_lat = mean(lat), avg_long = mean(long))
+county_name <- df_clean %>% dplyr::select(county_fips, county_name) %>% distinct()
+county_label <- left_join(county_label, county_name, by = c("fips" = "county_fips"))
+county_label <- county_label %>% mutate(c_name = gsub(" County", "", county_name))
+
+ggplot(gcounty_arrests %>% filter(is.na(value) == FALSE)) +
+  geom_polygon(aes(long, lat, group = group, fill = value)) +
+  geom_text(data = county_label, aes(x = avg_long, y = avg_lat, label = c_name)) +
+  scale_fill_gradientn(colours = brewer.pal(n=9, name = "YlGnBu"), name = "Total Arrests")
+```
+
+Total miles traveled-- interstate:
+
+```{r, echo = FALSE, message = FALSE}
+miles <- read.csv("E:/Learning/Springboard Intro to Data Science/capstone/2014_Daily_Vehicle_Miles_Travelled_By_Town_And_Roadway_Classification.csv", stringsAsFactors=F)
+miles_df <- data.frame(county = miles$County, interstate = miles$Interstate.DVMT, freeway = miles$Freeway.DVMT)
+miles_df$county <- as.character(miles_df$county)
+miles_df2 <- miles_df %>% group_by(county) %>% dplyr::summarise(sum_interstate = sum(interstate), sum_freeway = sum(freeway))
+miles_df2 <- left_join(miles_df2, county_label, by = c("county" = "c_name"))
+gcounty_miles <- left_join(gcounty, miles_df2, by = "fips")
+ggplot(gcounty_miles %>% filter(is.na(sum_interstate) == FALSE)) +
+  geom_polygon(aes(long, lat, group = group, fill = sum_interstate)) +
+  geom_text(data = county_label, aes(x = avg_long, y = avg_lat, label = c_name)) +
+  scale_fill_gradientn(colours = brewer.pal(n=9, name = "YlGnBu"), name = "Total Miles")
+
+```
+
+Total miles traveled-- freeway:
+
+```{r, echo = FALSE, message = FALSE}
+ggplot(gcounty_miles %>% filter(is.na(sum_freeway) == FALSE)) +
+  geom_polygon(aes(long, lat, group = group, fill = sum_freeway)) +
+  geom_text(data = county_label, aes(x = avg_long, y = avg_lat, label = c_name)) +
+  scale_fill_gradientn(colours = brewer.pal(n=9, name = "YlGnBu"), name = "Total Miles")
+```
+
+There is one obvious county that doesn't match up: New London. Further investigation might be necessary to determine if the high number of arrests per stops is expected.
+
+_\*For more visualizations and associated statistics, see the R scripts in GitHub, [here](https://github.com/paigewil/capstone/blob/master/visualization.R) and [here](https://github.com/paigewil/capstone/blob/master/statistics.R), respectively. Data wrangling of the Connecticut Census dataset can also be found in the visualization script_
+
+### Approach
+A supervised machine learning algorithm will be used to predict if a traffic stop will end in arrest, i.e. the is_arrested variable. Specifically, since the outcome variable is categorical, classification will be used. 
+
+### Deliverables
+The following items will be available on the project's [GitHub repository](https://github.com/paigewil/capstone):<br /> 
+
+* R code for:
+    + Data wrangling
+    + Exploratory data analysis
+    <br />&nbsp;&nbsp;&nbsp;-> including plots
+    + Statistics
+    + Machine learning
+* Report explaing the analysis conducted and associated findings
+* Slide deck presentation, catered to a non-technical audience
+
+### Appendix
+Conditions used in statistical analysis testing:
+
+* Chi-square independence test:
+    + Random: Since the data contains all stops for the specified time period, not just a selection, this is a random sample.
+    + Expected values for each data point >=5 (R function verifies).
+    + Independence:	Sample size <= 10% of population or sampling with replacement.
+        - This dataset is just for two years of stops, undoubtedly 10% of the total population of stops in Connecticut's lifetime. 
+* Two-sample z-test for proportions (same for proportion confidence interval):
+    + Random: See above.
+    + Normal: At least 10 expected successes and failures each— the R functions used test for this condition, if it is not met, test was not performed.
+    + Independence: See above.
+* T-test for sample mean comparison:
+    + Random: See above.
+    + Normal: Our sample size is >= 30 so using the central limit theorem, we can say our sampling distribution of the sample mean is normal.
+    + Independence: See above.
+
+### References
