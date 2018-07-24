@@ -4,7 +4,7 @@ This repository contains source data, code, generated plots, and supporting docu
   * capstone_proposal files contain an introduction to the project and associated data, the problem, and the methods for completing the project
   * exploratory_data_analysis_report files contains a summarizing report of the univariate visual analysis done in visualization.R. It contains code, plots, and analysis and explanation.
   * statistical_analysis_report files summarize the bivariate plot investigation and supporting statistical analysis. Code from statistics.R and visualization.R was used.
-  * capstone_milestone_report is an extension of the capstone_proposal file, adding the visualization and statistical analysis components.
+  * capstone_milestone_report is an extension of the capstone_proposal file, adding the visualization and statistical analysis components
 
 *	CSV files: 
     * CT_cleaned.csv is my original dataset containing State Police traffic stop information
