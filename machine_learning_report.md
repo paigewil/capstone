@@ -224,6 +224,8 @@ set.seed(3000)
 spl_cdp = createDataPartition(stops_arrested$is_arrested, p = 0.75, list = FALSE)
 train_arrest = stops_arrested[spl_cdp,]
 test_arrest = stops_arrested[-spl_cdp,]
+head(train_arrest)
+head(test_arrest)
 ```
 
 One hurdle in the dataset is that it is signficantly imbalanced, meaning we have a lot more non-arrests than arrests. Specifically, non-arrests make up 97.67% of the data. To account for the imbalance such that the machine learning algorithm doesn't predict False for every observation to get a high accuracy, we will test a number of solutions with a number of algorithms to pick the best performing model.
@@ -231,107 +233,60 @@ One hurdle in the dataset is that it is signficantly imbalanced, meaning we have
 Using SMOTE to fix imbalance with the CART algorithm:
 
 ``` r
-set.seed(111)
-train.smote <- SMOTE(is_arrested ~., data = train_arrest)
-tree.smote <- rpart(is_arrested ~ ., data = train.smote)
-prp(tree.smote)
+# set.seed(111)
+# train.smote <- SMOTE(is_arrested ~., data = train_arrest)
+# tree.smote <- rpart(is_arrested ~ ., data = train.smote)
+# prp(tree.smote)
 ```
-
-![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-15-1.png)
 
 When predicting on the test set, we see that the Kappa is low at 0.2214 with the AUC, not bad at 0.77:
 
 ``` r
-pred.tree.smote2 <- predict(tree.smote, newdata = test_arrest, type = "class")
-confusionMatrix(table(test_arrest$is_arrested, pred.tree.smote2))$overall['Kappa']
+# pred.tree.smote2 <- predict(tree.smote, newdata = test_arrest, type = "class")
+# confusionMatrix(table(test_arrest$is_arrested, pred.tree.smote2))$overall['Kappa']
+# roc.curve(test_arrest$is_arrested, pred.tree.smote2)
 ```
-
-    ##     Kappa 
-    ## 0.2214208
-
-``` r
-roc.curve(test_arrest$is_arrested, pred.tree.smote2)
-```
-
-![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-16-1.png)
-
-    ## Area under the curve (AUC): 0.770
 
 Using over-sampling to fix imbalance with the Random Forest algorithm:
 
 ``` r
-set.seed(111)
-train_arrest_over <- ovun.sample(is_arrested ~., data = train_arrest, method = "over", N = 2*229335)$data
-rf.over <- randomForest(is_arrested ~ ., data = train_arrest_over, ntree = 50)
-pred.rf.over <- predict(rf.over, newdata = test_arrest, type = "class")
-confusionMatrix(table(test_arrest$is_arrested, pred.rf.over))$overall['Kappa']
+# set.seed(111)
+# train_arrest_over <- ovun.sample(is_arrested ~., data = train_arrest, method = "over", N = 2*229335)$data
+# rf.over <- randomForest(is_arrested ~ ., data = train_arrest_over, ntree = 50)
+# pred.rf.over <- predict(rf.over, newdata = test_arrest, type = "class")
+# confusionMatrix(table(test_arrest$is_arrested, pred.rf.over))$overall['Kappa']
+# roc.curve(test_arrest$is_arrested, pred.rf.over)
 ```
-
-    ##    Kappa 
-    ## 0.322508
-
-``` r
-roc.curve(test_arrest$is_arrested, pred.rf.over)
-```
-
-![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-17-1.png)
-
-    ## Area under the curve (AUC): 0.732
 
 The Kappa is slightly higher, but still low at 0.3134 and the AUC is not bad at 0.733:
 
 Using SMOTE to fix imbalance with the Naive Bayes algorithm:
 
 ``` r
-set.seed(111)
-nb.model.smote <- naiveBayes(is_arrested ~., data = train.smote, laplace = 1)
-nb.predict.smote <- predict(nb.model.smote, newdata = test_arrest, type = "class")
-confusionMatrix(table(test_arrest$is_arrested, nb.predict.smote))$overall['Kappa']
+# set.seed(111)
+# nb.model.smote <- naiveBayes(is_arrested ~., data = train.smote, laplace = 1)
+# nb.predict.smote <- predict(nb.model.smote, newdata = test_arrest, type = "class")
+# confusionMatrix(table(test_arrest$is_arrested, nb.predict.smote))$overall['Kappa']
+# roc.curve(test_arrest$is_arrested, nb.predict.smote)
 ```
-
-    ##    Kappa 
-    ## 0.256684
-
-``` r
-roc.curve(test_arrest$is_arrested, nb.predict.smote)
-```
-
-![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-18-1.png)
-
-    ## Area under the curve (AUC): 0.744
 
 The Kappa is still low at 0.258102 with the AUC at 0.743.
 
 Now, instead of balancing the unbalanced dataset by adding manufactured obserations or removing them, we can also use a Penalty Matrix. Here, we want a higher penalty for false negatives, i.e., where the model labels an observation as having no arrest when there was one, because we're most concerned with accurately labeling arrests. Thus, our Penalty Matrix will weight those error more heavily.
 
 ``` r
-PenaltyMatrix = matrix(c(0,1,6,0), byrow = TRUE, nrow = 2)
+# PenaltyMatrix = matrix(c(0,1,6,0), byrow = TRUE, nrow = 2)
 ```
 
 Here, we use CART with our Penalty Matrix:
 
 ``` r
-stops_arrest_tree_penalty <- rpart(is_arrested ~., data = train_arrest, parms = list(loss = PenaltyMatrix))
-prp(stops_arrest_tree_penalty)
+# stops_arrest_tree_penalty <- rpart(is_arrested ~., data = train_arrest, parms = list(loss = PenaltyMatrix))
+# prp(stops_arrest_tree_penalty)
+# PredictCARTPenalty2 = predict(stops_arrest_tree_penalty, newdata = test_arrest, type = "class")
+# confusionMatrix(table(test_arrest$is_arrested, PredictCARTPenalty2))$overall['Kappa']
+# roc.curve(test_arrest$is_arrested, PredictCARTPenalty2)
 ```
-
-![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-20-1.png)
-
-``` r
-PredictCARTPenalty2 = predict(stops_arrest_tree_penalty, newdata = test_arrest, type = "class")
-confusionMatrix(table(test_arrest$is_arrested, PredictCARTPenalty2))$overall['Kappa']
-```
-
-    ##     Kappa 
-    ## 0.3537442
-
-``` r
-roc.curve(test_arrest$is_arrested, PredictCARTPenalty2)
-```
-
-![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-20-2.png)
-
-    ## Area under the curve (AUC): 0.693
 
 This model, so far, performs the best with a Kappa at 0.3537442 and an AUC at 0.693.
 
@@ -340,236 +295,184 @@ To help us widdle down the model options, we'll perform a 10-fold CV test and se
 SMOTE with CART:
 
 ``` r
-set.seed(123)
-folds <- createFolds(stops_arrested$is_arrested, k = 10)
-cv_results <- lapply(folds, function(x) {
-  arrest_train <- stops_arrested[-x, ]
-  arrest_test <- stops_arrested[x, ]
-  arrest.train.smote <- SMOTE(is_arrested ~., data = arrest_train)
-  tree.model <- rpart(is_arrested ~ ., data = arrest.train.smote)
-  arrest.pred <- predict(tree.model, arrest_test, type = "class")
-  auc_val <- roc.curve(arrest_test$is_arrested, arrest.pred)$auc
-  kappa <- kappa2(data.frame(arrest_test$is_arrested, arrest.pred))$value
-  return(c(auc_val, kappa))
-})
-```
-
-``` r
-df_cv_results <- data.frame(cv_results)
-#AUC
-mean(unlist(df_cv_results[1,]))
-#Kappa
-mean(unlist(df_cv_results[2,]))
+# set.seed(123)
+# folds <- createFolds(stops_arrested$is_arrested, k = 10)
+# cv_results <- lapply(folds, function(x) {
+#   arrest_train <- stops_arrested[-x, ]
+#   arrest_test <- stops_arrested[x, ]
+#   arrest.train.smote <- SMOTE(is_arrested ~., data = arrest_train)
+#   tree.model <- rpart(is_arrested ~ ., data = arrest.train.smote)
+#   arrest.pred <- predict(tree.model, arrest_test, type = "class")
+#   auc_val <- roc.curve(arrest_test$is_arrested, arrest.pred)$auc
+#   kappa <- kappa2(data.frame(arrest_test$is_arrested, arrest.pred))$value
+#   return(c(auc_val, kappa))
+# })
+# 
+# df_cv_results <- data.frame(cv_results)
+# #AUC
+# mean(unlist(df_cv_results[1,]))
+# #Kappa
+# mean(unlist(df_cv_results[2,]))
 ```
 
 Penalty Matrix with CART:
 
 ``` r
-set.seed(123)
-cv_resultsPM <- lapply(folds, function(x) {
-  arrest_train <- stops_arrested[-x, ]
-  arrest_test <- stops_arrested[x, ]
-  tree.model <- rpart(is_arrested ~ ., data = arrest_train, parms = list(loss = PenaltyMatrix))
-  arrest.pred <- predict(tree.model, arrest_test, type = "class")
-  auc_val <- roc.curve(arrest_test$is_arrested, arrest.pred)$auc
-  kappa <- kappa2(data.frame(arrest_test$is_arrested, arrest.pred))$value
-  return(c(auc_val, kappa))
-})
+# set.seed(123)
+# cv_resultsPM <- lapply(folds, function(x) {
+#   arrest_train <- stops_arrested[-x, ]
+#   arrest_test <- stops_arrested[x, ]
+#   tree.model <- rpart(is_arrested ~ ., data = arrest_train, parms = list(loss = PenaltyMatrix))
+#   arrest.pred <- predict(tree.model, arrest_test, type = "class")
+#   auc_val <- roc.curve(arrest_test$is_arrested, arrest.pred)$auc
+#   kappa <- kappa2(data.frame(arrest_test$is_arrested, arrest.pred))$value
+#   return(c(auc_val, kappa))
+# })
+# 
+# df_cv_resultsPM <- data.frame(cv_resultsPM)
+# #AUC
+# mean(unlist(df_cv_resultsPM[1,]))
+# #Kappa
+# mean(unlist(df_cv_resultsPM[2,]))
 ```
-
-``` r
-df_cv_resultsPM <- data.frame(cv_resultsPM)
-#AUC
-mean(unlist(df_cv_resultsPM[1,]))
-```
-
-    ## [1] 0.7018223
-
-``` r
-#Kappa
-mean(unlist(df_cv_resultsPM[2,]))
-```
-
-    ## [1] 0.3649853
 
 SMOTE with RandomForest:
 
 ``` r
-set.seed(123)
-cv_results_rf <- lapply(folds, function(x) {
-  arrest_train <- stops_arrested[-x, ]
-  arrest_test <- stops_arrested[x, ]
-  arrest.train.smote <- SMOTE(is_arrested ~., data = arrest_train)
-  tree.model <- randomForest(is_arrested ~ ., data = arrest.train.smote)
-  arrest.pred <- predict(tree.model, arrest_test, type = "class")
-  auc_val <- roc.curve(arrest_test$is_arrested, arrest.pred)$auc
-  kappa <- kappa2(data.frame(arrest_test$is_arrested, arrest.pred))$value
-  return(c(auc_val, kappa))
-})
-```
-
-``` r
-df_cv_results_rf <- data.frame(cv_results_rf)
-#AUC
-mean(unlist(df_cv_results_rf[1,]))
-#Kappa
-mean(unlist(df_cv_results_rf[2,]))
+# set.seed(123)
+# cv_results_rf <- lapply(folds, function(x) {
+#   arrest_train <- stops_arrested[-x, ]
+#   arrest_test <- stops_arrested[x, ]
+#   arrest.train.smote <- SMOTE(is_arrested ~., data = arrest_train)
+#   tree.model <- randomForest(is_arrested ~ ., data = arrest.train.smote)
+#   arrest.pred <- predict(tree.model, arrest_test, type = "class")
+#   auc_val <- roc.curve(arrest_test$is_arrested, arrest.pred)$auc
+#   kappa <- kappa2(data.frame(arrest_test$is_arrested, arrest.pred))$value
+#   return(c(auc_val, kappa))
+# })
+# 
+# df_cv_results_rf <- data.frame(cv_results_rf)
+# #AUC
+# mean(unlist(df_cv_results_rf[1,]))
+# #Kappa
+# mean(unlist(df_cv_results_rf[2,]))
 ```
 
 Over-sampling with RandomForest:
 
 ``` r
-f1.train <- stops_arrested[-folds$Fold01, ]
-f1.test <- stops_arrested[folds$Fold01, ]
-f1.ovun <- ovun.sample(is_arrested ~., data = f1.train, method = "over", N = 2*nrow(f1.train[f1.train$is_arrested == FALSE,]))$data
-f1.model <- randomForest(is_arrested ~ ., data = f1.ovun, ntree = 50)
-f1.pred <- predict(f1.model, f1.test, type = "class")
-f1_auc_val <- roc.curve(f1.test$is_arrested, f1.pred)$auc
+# f1.train <- stops_arrested[-folds$Fold01, ]
+# f1.test <- stops_arrested[folds$Fold01, ]
+# f1.ovun <- ovun.sample(is_arrested ~., data = f1.train, method = "over", N = 2*nrow(f1.train[f1.train$is_arrested == FALSE,]))$data
+# f1.model <- randomForest(is_arrested ~ ., data = f1.ovun, ntree = 50)
+# f1.pred <- predict(f1.model, f1.test, type = "class")
+# f1_auc_val <- roc.curve(f1.test$is_arrested, f1.pred)$auc
+# f1_kappa <- kappa2(data.frame(f1.test$is_arrested, f1.pred))$value
+# 
+# f2.train <- stops_arrested[-folds$Fold02, ]
+# f2.test <- stops_arrested[folds$Fold02, ]
+# f2.ovun <- ovun.sample(is_arrested ~., data = f2.train, method = "over", N = 2*nrow(f2.train[f2.train$is_arrested == FALSE,]))$data
+# f2.model <- randomForest(is_arrested ~ ., data = f2.ovun, ntree = 50)
+# f2.pred <- predict(f2.model, f2.test, type = "class")
+# f2_auc_val <- roc.curve(f2.test$is_arrested, f2.pred)$auc
+# f2_kappa <- kappa2(data.frame(f2.test$is_arrested, f2.pred))$value
+# 
+# f3.train <- stops_arrested[-folds$Fold03, ]
+# f3.test <- stops_arrested[folds$Fold03, ]
+# f3.ovun <- ovun.sample(is_arrested ~., data = f3.train, method = "over", N = 2*nrow(f3.train[f3.train$is_arrested == FALSE,]))$data
+# f3.model <- randomForest(is_arrested ~ ., data = f3.ovun, ntree = 50)
+# f3.pred <- predict(f3.model, f3.test, type = "class")
+# f3_auc_val <- roc.curve(f3.test$is_arrested, f3.pred)$auc
+# f3_kappa <- kappa2(data.frame(f3.test$is_arrested, f3.pred))$value
+# 
+# f4.train <- stops_arrested[-folds$Fold04, ]
+# f4.test <- stops_arrested[folds$Fold04, ]
+# f4.ovun <- ovun.sample(is_arrested ~., data = f4.train, method = "over", N = 2*nrow(f4.train[f4.train$is_arrested == FALSE,]))$data
+# f4.model <- randomForest(is_arrested ~ ., data = f4.ovun, ntree = 50)
+# f4.pred <- predict(f4.model, f4.test, type = "class")
+# f4_auc_val <- roc.curve(f4.test$is_arrested, f4.pred)$auc
+# f4_kappa <- kappa2(data.frame(f4.test$is_arrested, f4.pred))$value
+# 
+# f5.train <- stops_arrested[-folds$Fold05, ]
+# f5.test <- stops_arrested[folds$Fold05, ]
+# f5.ovun <- ovun.sample(is_arrested ~., data = f5.train, method = "over", N = 2*nrow(f5.train[f5.train$is_arrested == FALSE,]))$data
+# f5.model <- randomForest(is_arrested ~ ., data = f5.ovun, ntree = 50)
+# f5.pred <- predict(f5.model, f5.test, type = "class")
+# f5_auc_val <- roc.curve(f5.test$is_arrested, f5.pred)$auc
+# f5_kappa <- kappa2(data.frame(f5.test$is_arrested, f5.pred))$value
+# 
+# f6.train <- stops_arrested[-folds$Fold06, ]
+# f6.test <- stops_arrested[folds$Fold06, ]
+# f6.ovun <- ovun.sample(is_arrested ~., data = f6.train, method = "over", N = 2*nrow(f6.train[f6.train$is_arrested == FALSE,]))$data
+# f6.model <- randomForest(is_arrested ~ ., data = f6.ovun, ntree = 50)
+# f6.pred <- predict(f6.model, f6.test, type = "class")
+# f6_auc_val <- roc.curve(f6.test$is_arrested, f6.pred)$auc
+# f6_kappa <- kappa2(data.frame(f6.test$is_arrested, f6.pred))$value
+# 
+# f7.train <- stops_arrested[-folds$Fold07, ]
+# f7.test <- stops_arrested[folds$Fold07, ]
+# f7.ovun <- ovun.sample(is_arrested ~., data = f7.train, method = "over", N = 2*nrow(f7.train[f7.train$is_arrested == FALSE,]))$data
+# f7.model <- randomForest(is_arrested ~ ., data = f7.ovun, ntree = 50)
+# f7.pred <- predict(f7.model, f7.test, type = "class")
+# f7_auc_val <- roc.curve(f7.test$is_arrested, f7.pred)$auc
+# f7_kappa <- kappa2(data.frame(f7.test$is_arrested, f7.pred))$value
+# 
+# f8.train <- stops_arrested[-folds$Fold08, ]
+# f8.test <- stops_arrested[folds$Fold08, ]
+# f8.ovun <- ovun.sample(is_arrested ~., data = f8.train, method = "over", N = 2*nrow(f8.train[f8.train$is_arrested == FALSE,]))$data
+# f8.model <- randomForest(is_arrested ~ ., data = f8.ovun, ntree = 50)
+# f8.pred <- predict(f8.model, f8.test, type = "class")
+# f8_auc_val <- roc.curve(f8.test$is_arrested, f8.pred)$auc
+# f8_kappa <- kappa2(data.frame(f8.test$is_arrested, f8.pred))$value
+# 
+# f9.train <- stops_arrested[-folds$Fold09, ]
+# f9.test <- stops_arrested[folds$Fold09, ]
+# f9.ovun <- ovun.sample(is_arrested ~., data = f9.train, method = "over", N = 2*nrow(f9.train[f9.train$is_arrested == FALSE,]))$data
+# f9.model <- randomForest(is_arrested ~ ., data = f9.ovun, ntree = 50)
+# f9.pred <- predict(f9.model, f9.test, type = "class")
+# f9_auc_val <- roc.curve(f9.test$is_arrested, f9.pred)$auc
+# f9_kappa <- kappa2(data.frame(f9.test$is_arrested, f9.pred))$value
+# 
+# f10.train <- stops_arrested[-folds$Fold10, ]
+# f10.test <- stops_arrested[folds$Fold10, ]
+# f10.ovun <- ovun.sample(is_arrested ~., data = f10.train, method = "over", N = 2*nrow(f10.train[f10.train$is_arrested == FALSE,]))$data
+# f10.model <- randomForest(is_arrested ~ ., data = f10.ovun, ntree = 50)
+# f10.pred <- predict(f10.model, f10.test, type = "class")
+# f10_auc_val <- roc.curve(f10.test$is_arrested, f10.pred)$auc
+# f10_kappa <- kappa2(data.frame(f10.test$is_arrested, f10.pred))$value
+# 
+# 
+# combined_auc <- c(f1_auc_val, f2_auc_val, f3_auc_val, f4_auc_val, f5_auc_val, f6_auc_val, f7_auc_val, f8_auc_val, f9_auc_val, f10_auc_val)
+# combined_kappa <- c(f1_kappa, f2_kappa, f3_kappa, f4_kappa, f5_kappa, f6_kappa, f7_kappa, f8_kappa, f9_kappa, f10_kappa)
 ```
 
 ``` r
-f1_kappa <- kappa2(data.frame(f1.test$is_arrested, f1.pred))$value
-
-f2.train <- stops_arrested[-folds$Fold02, ]
-f2.test <- stops_arrested[folds$Fold02, ]
-f2.ovun <- ovun.sample(is_arrested ~., data = f2.train, method = "over", N = 2*nrow(f2.train[f2.train$is_arrested == FALSE,]))$data
-f2.model <- randomForest(is_arrested ~ ., data = f2.ovun, ntree = 50)
-f2.pred <- predict(f2.model, f2.test, type = "class")
-f2_auc_val <- roc.curve(f2.test$is_arrested, f2.pred)$auc
+# #AUC
+# mean(combined_auc)
+# #Kappa
+# mean(combined_kappa)
 ```
-
-``` r
-f2_kappa <- kappa2(data.frame(f2.test$is_arrested, f2.pred))$value
-
-f3.train <- stops_arrested[-folds$Fold03, ]
-f3.test <- stops_arrested[folds$Fold03, ]
-f3.ovun <- ovun.sample(is_arrested ~., data = f3.train, method = "over", N = 2*nrow(f3.train[f3.train$is_arrested == FALSE,]))$data
-f3.model <- randomForest(is_arrested ~ ., data = f3.ovun, ntree = 50)
-f3.pred <- predict(f3.model, f3.test, type = "class")
-f3_auc_val <- roc.curve(f3.test$is_arrested, f3.pred)$auc
-```
-
-``` r
-f3_kappa <- kappa2(data.frame(f3.test$is_arrested, f3.pred))$value
-
-f4.train <- stops_arrested[-folds$Fold04, ]
-f4.test <- stops_arrested[folds$Fold04, ]
-f4.ovun <- ovun.sample(is_arrested ~., data = f4.train, method = "over", N = 2*nrow(f4.train[f4.train$is_arrested == FALSE,]))$data
-f4.model <- randomForest(is_arrested ~ ., data = f4.ovun, ntree = 50)
-f4.pred <- predict(f4.model, f4.test, type = "class")
-f4_auc_val <- roc.curve(f4.test$is_arrested, f4.pred)$auc
-```
-
-``` r
-f4_kappa <- kappa2(data.frame(f4.test$is_arrested, f4.pred))$value
-
-f5.train <- stops_arrested[-folds$Fold05, ]
-f5.test <- stops_arrested[folds$Fold05, ]
-f5.ovun <- ovun.sample(is_arrested ~., data = f5.train, method = "over", N = 2*nrow(f5.train[f5.train$is_arrested == FALSE,]))$data
-f5.model <- randomForest(is_arrested ~ ., data = f5.ovun, ntree = 50)
-f5.pred <- predict(f5.model, f5.test, type = "class")
-f5_auc_val <- roc.curve(f5.test$is_arrested, f5.pred)$auc
-```
-
-``` r
-f5_kappa <- kappa2(data.frame(f5.test$is_arrested, f5.pred))$value
-
-f6.train <- stops_arrested[-folds$Fold06, ]
-f6.test <- stops_arrested[folds$Fold06, ]
-f6.ovun <- ovun.sample(is_arrested ~., data = f6.train, method = "over", N = 2*nrow(f6.train[f6.train$is_arrested == FALSE,]))$data
-f6.model <- randomForest(is_arrested ~ ., data = f6.ovun, ntree = 50)
-f6.pred <- predict(f6.model, f6.test, type = "class")
-f6_auc_val <- roc.curve(f6.test$is_arrested, f6.pred)$auc
-```
-
-``` r
-f6_kappa <- kappa2(data.frame(f6.test$is_arrested, f6.pred))$value
-
-f7.train <- stops_arrested[-folds$Fold07, ]
-f7.test <- stops_arrested[folds$Fold07, ]
-f7.ovun <- ovun.sample(is_arrested ~., data = f7.train, method = "over", N = 2*nrow(f7.train[f7.train$is_arrested == FALSE,]))$data
-f7.model <- randomForest(is_arrested ~ ., data = f7.ovun, ntree = 50)
-f7.pred <- predict(f7.model, f7.test, type = "class")
-f7_auc_val <- roc.curve(f7.test$is_arrested, f7.pred)$auc
-```
-
-``` r
-f7_kappa <- kappa2(data.frame(f7.test$is_arrested, f7.pred))$value
-
-f8.train <- stops_arrested[-folds$Fold08, ]
-f8.test <- stops_arrested[folds$Fold08, ]
-f8.ovun <- ovun.sample(is_arrested ~., data = f8.train, method = "over", N = 2*nrow(f8.train[f8.train$is_arrested == FALSE,]))$data
-f8.model <- randomForest(is_arrested ~ ., data = f8.ovun, ntree = 50)
-f8.pred <- predict(f8.model, f8.test, type = "class")
-f8_auc_val <- roc.curve(f8.test$is_arrested, f8.pred)$auc
-```
-
-``` r
-f8_kappa <- kappa2(data.frame(f8.test$is_arrested, f8.pred))$value
-
-f9.train <- stops_arrested[-folds$Fold09, ]
-f9.test <- stops_arrested[folds$Fold09, ]
-f9.ovun <- ovun.sample(is_arrested ~., data = f9.train, method = "over", N = 2*nrow(f9.train[f9.train$is_arrested == FALSE,]))$data
-f9.model <- randomForest(is_arrested ~ ., data = f9.ovun, ntree = 50)
-f9.pred <- predict(f9.model, f9.test, type = "class")
-f9_auc_val <- roc.curve(f9.test$is_arrested, f9.pred)$auc
-```
-
-``` r
-f9_kappa <- kappa2(data.frame(f9.test$is_arrested, f9.pred))$value
-
-f10.train <- stops_arrested[-folds$Fold10, ]
-f10.test <- stops_arrested[folds$Fold10, ]
-f10.ovun <- ovun.sample(is_arrested ~., data = f10.train, method = "over", N = 2*nrow(f10.train[f10.train$is_arrested == FALSE,]))$data
-f10.model <- randomForest(is_arrested ~ ., data = f10.ovun, ntree = 50)
-f10.pred <- predict(f10.model, f10.test, type = "class")
-f10_auc_val <- roc.curve(f10.test$is_arrested, f10.pred)$auc
-```
-
-``` r
-f10_kappa <- kappa2(data.frame(f10.test$is_arrested, f10.pred))$value
-
-
-combined_auc <- c(f1_auc_val, f2_auc_val, f3_auc_val, f4_auc_val, f5_auc_val, f6_auc_val, f7_auc_val, f8_auc_val, f9_auc_val, f10_auc_val)
-combined_kappa <- c(f1_kappa, f2_kappa, f3_kappa, f4_kappa, f5_kappa, f6_kappa, f7_kappa, f8_kappa, f9_kappa, f10_kappa)
-```
-
-``` r
-#AUC
-mean(combined_auc)
-```
-
-    ## [1] 0.7337325
-
-``` r
-#Kappa
-mean(combined_kappa)
-```
-
-    ## [1] 0.3045106
 
 SMOTE with Naive Bayes:
 
 ``` r
-set.seed(123)
-cv_results_nb <- lapply(folds, function(x) {
-  arrest_train <- stops_arrested[-x, ]
-  arrest_test <- stops_arrested[x, ]
-  arrest.train.smote <- SMOTE(is_arrested ~., data = arrest_train)
-  tree.model <- naiveBayes(is_arrested ~., data = arrest.train.smote, laplace = 1)
-  arrest.pred <- predict(tree.model, arrest_test, type = "class")
-  auc_val <- roc.curve(arrest_test$is_arrested, arrest.pred)$auc
-  kappa <- kappa2(data.frame(arrest_test$is_arrested, arrest.pred))$value
-  return(c(auc_val, kappa))
-})
-```
-
-``` r
-df_cv_results_nb <- data.frame(cv_results_nb)
-#AUC
-mean(unlist(df_cv_results_nb[1,]))
-#Kappa
-mean(unlist(df_cv_results_nb[2,]))
+# set.seed(123)
+# cv_results_nb <- lapply(folds, function(x) {
+#   arrest_train <- stops_arrested[-x, ]
+#   arrest_test <- stops_arrested[x, ]
+#   arrest.train.smote <- SMOTE(is_arrested ~., data = arrest_train)
+#   tree.model <- naiveBayes(is_arrested ~., data = arrest.train.smote, laplace = 1)
+#   arrest.pred <- predict(tree.model, arrest_test, type = "class")
+#   auc_val <- roc.curve(arrest_test$is_arrested, arrest.pred)$auc
+#   kappa <- kappa2(data.frame(arrest_test$is_arrested, arrest.pred))$value
+#   return(c(auc_val, kappa))
+# })
+# 
+# df_cv_results_nb <- data.frame(cv_results_nb)
+# #AUC
+# mean(unlist(df_cv_results_nb[1,]))
+# #Kappa
+# mean(unlist(df_cv_results_nb[2,]))
 ```
 
 From the resulting Kappas and AUCs, we will fine-tune the top three performing models using cross-validation and pick our top performing of them to use as our overall model.
