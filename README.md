@@ -6,6 +6,7 @@ This repository contains source data, code, generated plots, and supporting docu
   * statistical_analysis_report files summarize the bivariate plot investigation and supporting statistical analysis. Code from statistics.R and visualization.R was used.
   * capstone_milestone_report is an extension of the capstone_proposal file, adding the visualization and statistical analysis components
   * machine_learning_report files summarize the supervised machine learning algorithms tested for the classification problem in machine_learning.R, including the final model used
+  * capstone_report files contain the final report of the capstone project; summarizing the problem, client, data, data wrangling steps, visualization, statistics, machine learning, and conclusions
 
 *	CSV files: 
     * CT_cleaned.csv is my original dataset containing State Police traffic stop information
