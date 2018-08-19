@@ -3,9 +3,9 @@ title: 'An Analysis of Connecticut State Police Traffic Stops: Machine Learning'
 author: "Paige Williams"
 always_allow_html: yes
 output:
+  html_document: default
   md_document:
     variant: markdown_github
-  html_document: default
   pdf_document: default
   word_document: default
 ---
