@@ -1,3 +1,7 @@
+Introduction to Data Science Capstone Project: <br />An Analysis of Connecticut State Police Traffic Stops
+================
+Paige Williams
+
 ### Problem
 
 In recent years, there has been a growing spotlight on the interactions between police and citizens, causing many protests throughout the country and poor relationships with law enforcement. In an effort to provide an objective understanding, this project will use machine learning to investigate what factors, if any, predict which traffic stops end in arrest. And, which, if any, of those factors are demographic, indicating the possible prevalence of police profiling.
