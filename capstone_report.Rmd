@@ -1,13 +1,8 @@
 ---
-title: 'Introduction to Data Science Capstone Project: <br />An Analysis of Connecticut
-  State Police Traffic Stops'
+title: "Introduction to Data Science Capstone Project: <br />An Analysis of Connecticut State Police Traffic Stops"
 author: "Paige Williams"
-output:
-  md_document:
-    variant: markdown_github
-  html_document: default
-  pdf_document: default
-  word_document: default
+always_allow_html: yes
+output: github_document
 bibliography: bibliography.bibtex
 ---
 
