@@ -836,7 +836,7 @@ These results seem to indicate that while having a search conducted during a sto
 
 In the image below, we see that most stops where contraband was found don't end in arrest. ![](capstone_report_files/figure-markdown_github/unnamed-chunk-16-1.png)
 
-For some context, [in the summer of 2015](https://connecticut.cbslocal.com/2015/06/30/connecticut-eases-penalties-for-most-drug-possession-crimes/) (Collins 2015), after the time period of this dataset, drug possession crime sentences were reduced to misdemeanors in Connecticut. Additionally, in 2011, Connecticut "decriminalized small amounts of marijuana" (Collins 2015). The high proportion of non-arrests for stops where contraband is found might mean either officers were not enforcing the law properly or a large number of the contraband found was small amounts of marijuana or another misdemeanor contraband. This is a good example of the desirability for more data, in this case, a feature detailing the contraband that was found. Ultimately, with the current data available, it is difficult to know if these results indicate police behavior that needs investigation or a confirmation of proper law enforcement.
+For some context, [in the summer of 2015](https://connecticut.cbslocal.com/2015/06/30/connecticut-eases-penalties-for-most-drug-possession-crimes/), after the time period of this dataset, drug possession crime sentences were reduced to misdemeanors in Connecticut. Additionally, in 2011, Connecticut "decriminalized small amounts of marijuana" (Collins 2015). The high proportion of non-arrests for stops where contraband is found might mean either officers were not enforcing the law properly or a large number of the contraband found was small amounts of marijuana or another misdemeanor contraband. This is a good example of the desirability for more data, in this case, a feature detailing the contraband that was found. Ultimately, with the current data available, it is difficult to know if these results indicate police behavior that needs investigation or a confirmation of proper law enforcement.
 
 Now that we've investigated features more closely related to the stop itself and seen that the results either align with our understanding of Connecticut law and policing or need more information to understand, let's investigate the impact of demographic features on arrest status.
 
@@ -922,7 +922,11 @@ chisq.test(race_arrest_chi)
 
 These results seem to lend support towards the concern that race, among other demographic factors, impacts arrest status outcome, at least within the Connecticut State Police. However, again, these results only show correlation, not causation, meaning the high arrests/stops ratio of Hispanic drivers does not necessarily mean Hispanic drivers are more likely to be arrested *because* of their race. Different groups could behave differently, leading to different arrest outcomes. For example, maybe a greater proportion of stopped Hispanic drivers have committed violations that require arrests compared to other races. Or maybe police officers behave differently between different groups, indicating bias. Both explanations could be concluded from the arrests/stops ratio discrepancies observed between the different races.
 
-It is difficult to have a more nuanced understanding and thoroughly investigate these questions with the current dataset. One reason being the violation buckets are general in such a way that the arrest outcome for each bucket varies depending on the specific offense, like "moving violation," as elaborated in the limitations section. Regardless, these finding should not be ignored. The Connecticut State Police department should track more granular data to gain clearer insights.
+If we breakdown the arrests/stops ratio by race for each stop\_duration (a top performing variable as we’ll see in the machine learning section), we can see some interesting trends. In the 1-15 min bucket, we see that Hispanic drivers have the highest arrests/stops ratio, which is pretty par for the course, given that overall, Hispanic drivers have the highest arrests/stops ratio. However, in the 16-30 min and 30+ min buckets, White drivers have the highest arrests/stops ratio and in the 30+ min bucket, Asian drivers have a much lower ratio. Again, it’s hard to parse out a definitive explanation. Are White drivers more talkative to police officers during arrest stops, causing a longer stop duration? Are Asian drivers quieter? Are the durations of arrest stops racial motivated?
+
+![](capstone_report_files/figure-markdown_github/unnamed-chunk-23-1.png)
+
+With our current dataset, it is difficult to have a more nuanced understanding and thoroughly investigate all the aforementioned questions. One reason being the violation buckets are general in such a way that the arrest outcome for each bucket varies depending on the specific offense, like "moving violation," as elaborated in the limitations section. Regardless, these finding should not be ignored. The Connecticut State Police department should track more granular data to gain clearer insights.
 
 ##### Race and Age:
 
@@ -935,7 +939,7 @@ ggboxplot(df_clean %>% filter(is_arrested == TRUE), x = "driver_race_raw", y = "
           xlab = "Driver Race", ylab = "Driver Age")
 ```
 
-![](capstone_report_files/figure-markdown_github/unnamed-chunk-23-1.png)
+![](capstone_report_files/figure-markdown_github/unnamed-chunk-24-1.png)
 
 Performing a t-test on the difference in mean ages of arrest for Hispanic and Black drivers versus the other races, confirms our observations, giving a p-value of less than 2.2e-16, meaning we favor the alternative hypothesis that says the mean age of arrest for Hispanic drivers and Black drivers is significantly lower than the other races.
 
@@ -987,7 +991,7 @@ ggplot(arrests_per_day %>% filter(is_arrested == TRUE), aes(as.numeric(day_of_mo
   scale_x_continuous(breaks = as.numeric(arrests_per_day$day_of_month), labels = as.character(arrests_per_day$day_of_month))
 ```
 
-![](capstone_report_files/figure-markdown_github/unnamed-chunk-25-1.png)
+![](capstone_report_files/figure-markdown_github/unnamed-chunk-26-1.png)
 
 ``` r
 end_of_month <- addmargins(table(df_clean$day_of_month, df_clean$is_arrested, useNA = "ifany"))
@@ -1017,7 +1021,7 @@ Some more temporal trends uncovered are; the arrests/stops ratios tend to be hig
 
 One more feature of interest worth mentioning is the arrests/stops ratio per county. As we can see from the graph below, there are some large discrepancies between some of the counties.
 
-![](capstone_report_files/figure-markdown_github/unnamed-chunk-27-1.png)
+![](capstone_report_files/figure-markdown_github/unnamed-chunk-28-1.png)
 
 Comparing the freeway and interstate volume traffic per county to the total number of arrests per county, shows some positive correlation, showing that certain counties have more highways and therefore more vehicles traveling through them, explaining the differing arrests/stops ratios.
 
@@ -1025,15 +1029,15 @@ As mentioned earlier, the data for freeway and interstate traffic volume comes f
 
 Total arrests per county:
 
-![](capstone_report_files/figure-markdown_github/unnamed-chunk-28-1.png)
+![](capstone_report_files/figure-markdown_github/unnamed-chunk-29-1.png)
 
 Total miles traveled-- interstate:
 
-![](capstone_report_files/figure-markdown_github/unnamed-chunk-29-1.png)
+![](capstone_report_files/figure-markdown_github/unnamed-chunk-30-1.png)
 
 Total miles traveled-- freeway:
 
-![](capstone_report_files/figure-markdown_github/unnamed-chunk-30-1.png)
+![](capstone_report_files/figure-markdown_github/unnamed-chunk-31-1.png)
 
 There is one obvious county that doesn't match up: New London. Further investigation is necessary to determine if the high number of arrests per stops is expected.
 
@@ -1283,7 +1287,7 @@ confusionMatrix(table(test_arrest$is_arrested, pred.cart.penalty.ft))$overall['K
 roc.curve(test_arrest$is_arrested, pred.cart.penalty.ft)
 ```
 
-![](capstone_report_files/figure-markdown_github/unnamed-chunk-44-1.png)
+![](capstone_report_files/figure-markdown_github/unnamed-chunk-45-1.png)
 
     ## Area under the curve (AUC): 0.693
 
@@ -1291,7 +1295,7 @@ roc.curve(test_arrest$is_arrested, pred.cart.penalty.ft)
 prp(cart.penalty.ft)
 ```
 
-![](capstone_report_files/figure-markdown_github/unnamed-chunk-44-2.png)
+![](capstone_report_files/figure-markdown_github/unnamed-chunk-45-2.png)
 
 ``` r
 print(cart.penalty.ft)
@@ -1326,7 +1330,7 @@ ROCperf_finalmodel <- performance(final_model_ROC, "tpr", "fpr")
 plot(ROCperf_finalmodel, colorize=TRUE, print.cutoffs.at=seq(0,0.1,by=0.01), text.adj=c(-0.2,1.7))
 ```
 
-![](capstone_report_files/figure-markdown_github/unnamed-chunk-45-1.png)
+![](capstone_report_files/figure-markdown_github/unnamed-chunk-46-1.png)
 
 ``` r
 confusionMatrix(table(test_arrest$is_arrested, final_model_pred[,2] >= 0.065))$overall['Kappa']
@@ -1339,7 +1343,7 @@ confusionMatrix(table(test_arrest$is_arrested, final_model_pred[,2] >= 0.065))$o
 roc.curve(test_arrest$is_arrested, final_model_pred[,2]>= 0.065)
 ```
 
-![](capstone_report_files/figure-markdown_github/unnamed-chunk-45-2.png)
+![](capstone_report_files/figure-markdown_github/unnamed-chunk-46-2.png)
 
     ## Area under the curve (AUC): 0.720
 

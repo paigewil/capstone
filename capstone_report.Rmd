@@ -348,7 +348,7 @@ ggplot(contraband, aes(Contraband, arrests_to_pop, fill = Arrested)) +
   scale_y_continuous(labels = scales::percent)
 ```
 
-For some context, [in the summer of 2015](https://connecticut.cbslocal.com/2015/06/30/connecticut-eases-penalties-for-most-drug-possession-crimes/) [@collins_2015], after the time period of this dataset, drug possession crime sentences were reduced to misdemeanors in Connecticut. Additionally, in 2011, Connecticut "decriminalized small amounts of marijuana" [@collins_2015]. The high proportion of non-arrests for stops where contraband is found might mean either officers were not enforcing the law properly or a large number of the contraband found was small amounts of marijuana or another misdemeanor contraband. This is a good example of the desirability for more data, in this case, a feature detailing the contraband that was found. Ultimately, with the current data available, it is difficult to know if these results indicate police behavior that needs investigation or a confirmation of proper law enforcement.
+For some context, [in the summer of 2015](https://connecticut.cbslocal.com/2015/06/30/connecticut-eases-penalties-for-most-drug-possession-crimes/), after the time period of this dataset, drug possession crime sentences were reduced to misdemeanors in Connecticut. Additionally, in 2011, Connecticut "decriminalized small amounts of marijuana" [@collins_2015]. The high proportion of non-arrests for stops where contraband is found might mean either officers were not enforcing the law properly or a large number of the contraband found was small amounts of marijuana or another misdemeanor contraband. This is a good example of the desirability for more data, in this case, a feature detailing the contraband that was found. Ultimately, with the current data available, it is difficult to know if these results indicate police behavior that needs investigation or a confirmation of proper law enforcement.
 
 
 Now that we've investigated features more closely related to the stop itself and seen that the results either align with our understanding of Connecticut law and policing or need more information to understand, let's investigate the impact of demographic features on arrest status.
@@ -446,7 +446,24 @@ chisq.test(race_arrest_chi)
 
 These results seem to lend support towards the concern that race, among other demographic factors, impacts arrest status outcome, at least within the Connecticut State Police. However, again, these results only show correlation, not causation, meaning the high arrests/stops ratio of Hispanic drivers does not necessarily mean Hispanic drivers are more likely to be arrested _because_ of their race. Different groups could behave differently, leading to different arrest outcomes. For example, maybe a greater proportion of stopped Hispanic drivers have committed violations that require arrests compared to other races. Or maybe police officers behave differently between different groups, indicating bias. Both explanations could be concluded from the arrests/stops ratio discrepancies observed between the different races. 
 
-It is difficult to have a more nuanced understanding and thoroughly investigate these questions with the current dataset. One reason being the violation buckets are general in such a way that the arrest outcome for each bucket varies depending on the specific offense, like "moving violation," as elaborated in the limitations section. Regardless, these finding should not be ignored. The Connecticut State Police department should track more granular data to gain clearer insights. 
+If we breakdown the arrests/stops ratio by race for each stop_duration (a top performing variable as we’ll see in the machine learning section), we can see some interesting trends. In the 1-15 min bucket, we see that Hispanic drivers have the highest arrests/stops ratio, which is pretty par for the course, given that overall, Hispanic drivers have the highest arrests/stops ratio. However, in the 16-30 min and 30+ min buckets, White drivers have the highest arrests/stops ratio and in the 30+ min bucket, Asian drivers have a much lower ratio. Again, it’s hard to parse out a definitive explanation. Are White drivers more talkative to police officers during arrest stops, causing a longer stop duration? Are Asian drivers quieter? Are the durations of arrest stops racial motivated? 
+
+```{r, echo = FALSE, message = FALSE}
+sd_race <- setNames(data.frame(table(df_clean$stop_duration, df_clean$driver_race_raw, df_clean$is_arrested, exclude = NULL)), c("Stop_Duration", "Race", "Arrested", "count")) 
+sd_race_total <- sd_race %>% group_by(Stop_Duration, Race) %>% dplyr::summarise(total_count = sum(count))
+sd_race <- left_join(sd_race, sd_race_total, by = c("Stop_Duration", "Race"))
+sd_race <- sd_race %>% mutate(arrests_to_pop = count/total_count)
+
+ggplot(sd_race %>% filter(Arrested == TRUE), aes(Race, arrests_to_pop, fill = Race)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(.~ Stop_Duration) +
+  labs(title = "Arrests/stops by race and stop duration", x = "Race/Stop Duration", y = "Arrests/stops") +
+  scale_y_continuous(labels = scales::percent) +
+  theme1
+ggsave("./EDA_images/126_arrest_rate_stop_duration_race.png")
+```
+
+With our current dataset, it is difficult to have a more nuanced understanding and thoroughly investigate all the aforementioned questions. One reason being the violation buckets are general in such a way that the arrest outcome for each bucket varies depending on the specific offense, like "moving violation," as elaborated in the limitations section. Regardless, these finding should not be ignored. The Connecticut State Police department should track more granular data to gain clearer insights. 
 
 ##### Race and Age:
 Adding an extra layer into our analysis of race, let’s see if there is a difference in the mean age of arrest for each race.
