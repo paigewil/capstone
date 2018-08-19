@@ -819,6 +819,31 @@ confusionMatrix(table(test_arrest$is_arrested, predict_rf))$overall['Kappa']
 roc.curve(test_arrest$is_arrested, predict_rf)
 #-> 0.742
 
+# Adding mtry =2
+ctrl_rf3 <- trainControl(method = "cv", number = 10, sampling = "smote")
+grid_rf3 <- expand.grid(.mtry = c(2, 3, 7, 14, 27))
+set.seed(13)
+m_rf3 <- train(is_arrested ~., data = train_arrest,
+              method = "rf",
+              metric = "Kappa",
+              ntree = 30,
+              trControl = ctrl_rf3,
+              tuneGrid = grid_rf3)
+m_rf3
+# -> best mtry = 3
+
+predict_rf3 <- predict(m_rf3, newdata = test_arrest)
+table(test_arrest$is_arrested, predict_rf3)
+# predict_rf3
+#       FALSE  TRUE
+# FALSE 73182  3262
+# TRUE    833   992
+kappa_rf3 <- kappa2(data.frame(test_arrest$is_arrested, predict_rf3))$value
+# -> 0.3036447
+confusionMatrix(table(test_arrest$is_arrested, predict_rf3))$overall['Kappa']
+roc.curve(test_arrest$is_arrested, predict_rf3)
+#-> 0.750
+
 
 
 # Random Forest with Over/Up-sampling
@@ -1946,7 +1971,7 @@ confusionMatrix(table(test_arrest$is_arrested, final_model_pred[,2] >= 0.065))$o
 # -> 0.2849794
 roc.curve(test_arrest$is_arrested, final_model_pred[,2]>= 0.065)
 # -> 0.720
-
+prp(final_model_pred)
 
 
 

@@ -683,7 +683,9 @@ df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name =
 
 There were a number of variables with both a "raw" and "non-raw" column, so we need to decide which column to use:
 
-For driver\_age and driver\_age\_raw, The Stanford Open Policing Project made ages &lt;15 blank in the driver\_age column, which I made NA for easier filtering. It is a fairly logical assumption that ages &lt; 15 were made in error, since in the US, one can't get their driver's permit until they're 15, so the driver\_age column was used throughout the rest of the analysis. Furthermore, the logic was extended to make older ages (&gt;=80) NA, also under the assumption they were made in error because it doesn't seem reasonable to have many 80+ year old drivers.
+For driver\_age and driver\_age\_raw, The Stanford Open Policing Project made ages &lt;15 blank in the driver\_age column, which I made NA for easier filtering. It is a fairly logical assumption that ages &lt; 15 were made in error, since in the US, one can't get their driver's permit until they're 15, so the driver\_age column was used throughout the rest of the analysis. Looking at the graph below showing the distribution of traffic stops per driver age, there is a bump in stops near the 100 years old. It doesn't seem reasonable to have many 80+ year old drivers, so under the same assumption of error that &lt; 15 year olds were made NA, 80+ year olds are made NA.
+
+![](capstone_report_files/figure-markdown_github/unnamed-chunk-7-1.png)
 
 ``` r
 df_clean <- df_clean %>% mutate(driver_age = replace(driver_age, driver_age == "", NA))
@@ -755,7 +757,7 @@ Below will highlight a few of the more important and interesting attributes, som
 
 By looking at the plot below, it becomes clear that the percent of stops that end in arrest increases as the stop durations increase in time length. This makes intuitive sense because, naturally the arresting process will take longer.
 
-![](capstone_report_files/figure-markdown_github/unnamed-chunk-11-1.png)
+![](capstone_report_files/figure-markdown_github/unnamed-chunk-12-1.png)
 
 Our visual analysis is cemented with statistical testing. We see that the greater proportion of arrests/stops in the 30+ time bucket is likely not due to chance as well as the presence of dependence between stop duration and arrest status.
 
@@ -798,9 +800,9 @@ res30
 
 ##### Search Conducted:
 
-While most stops where a search was conducted don’t end in arrest, the ratio of arrests/stops is 14.69 times more for a stop where a search is conducted. With a two-proportion z-test giving a p-value of 2.2e-16, we verify this result is statistically significant.
+While most stops where a search was conducted don’t end in arrest, the ratio of arrests/stops is 14.69 times more for a stop where a search is conducted. With a two-proportion z-test giving a p-value of less than 2.2e-16, we verify this result is statistically significant.
 
-![](capstone_report_files/figure-markdown_github/unnamed-chunk-13-1.png)
+![](capstone_report_files/figure-markdown_github/unnamed-chunk-14-1.png)
 
 ``` r
 # -> 2-sample test to compare proportions
@@ -824,13 +826,13 @@ res19
     ##     prop 1     prop 2 
     ## 0.27419355 0.01866999
 
-These results seem to indicate that while having a search conducted during a stop does not lead to an arrest a majority of the time, there is a higher likelihood of arrest when a search is conducted. This is not too concerning of a result because a search conducted does not mean contraband was found. However, it might lead one to question whether most of the stops where a search was conducted and contraband was found end in arrest. A dive into the contraband\_found variable, leads to some interesting results.
+These results seem to indicate that while having a search conducted during a stop does not lead to an arrest a majority of the time, there is a higher likelihood of arrest when a search is conducted. This result is not too concerning because a search conducted does not mean contraband was found. However, it might lead one to question whether most of the stops where a search was conducted and contraband was found end in arrest. A dive into the contraband\_found variable, leads to some interesting results.
 
 ##### Contraband Found:
 
-In the image below, we see that most stops where contraband was found don't end in arrest. ![](capstone_report_files/figure-markdown_github/unnamed-chunk-15-1.png)
+In the image below, we see that most stops where contraband was found don't end in arrest. ![](capstone_report_files/figure-markdown_github/unnamed-chunk-16-1.png)
 
-For some context, \[in the summer of 2015\] ((<span class="citeproc-not-found" data-reference-id="https://connecticut.cbslocal.com/2015/06/30/connecticut-eases-penalties-for-most-drug-possession-crimes">**???**</span>)/), after the time period of this dataset, drug possession crime sentences were reduced to misdemeanors in Connecticut. Additionally, in 2011, Connecticut "decriminalized small amounts of marijuana" (Collins 2015). The high proportion of non-arrests for stops where contraband is found might mean either officers were not enforcing the law properly or a large number of the contraband found was small amounts of marijuana or another misdemeanor contraband. This is a good example of the desirability for more data, in this case, a feature detailing the contraband that was found. Ultimately, with the current data available, it is difficult to know if these results indicate police behavior that needs investigation or a confirmation of proper law enforcement.
+For some context, \[in the summer of 2015\] (<https://connecticut.cbslocal.com/2015/06/30/connecticut-eases-penalties-for-most-drug-possession-crimes/>), after the time period of this dataset, drug possession crime sentences were reduced to misdemeanors in Connecticut. Additionally, in 2011, Connecticut "decriminalized small amounts of marijuana" (Collins 2015). The high proportion of non-arrests for stops where contraband is found might mean either officers were not enforcing the law properly or a large number of the contraband found was small amounts of marijuana or another misdemeanor contraband. This is a good example of the desirability for more data, in this case, a feature detailing the contraband that was found. Ultimately, with the current data available, it is difficult to know if these results indicate police behavior that needs investigation or a confirmation of proper law enforcement.
 
 Now that we've investigated features more closely related to the stop itself and seen that the results either align with our understanding of Connecticut law and policing or need more information to understand, let's investigate the impact of demographic features on arrest status.
 
@@ -838,9 +840,9 @@ Now that we've investigated features more closely related to the stop itself and
 
 From the bivariate plot breakdown of the arrests/stops ratio by gender, we see that males who are stopped are more likely to be arrested than females who are stopped. In fact, in this dataset, stopped men are 1.7 times more likely to be arrested than stopped women: 0.02650022 / 0.01589189 = 1.667531.
 
-![](capstone_report_files/figure-markdown_github/unnamed-chunk-16-1.png)![](capstone_report_files/figure-markdown_github/unnamed-chunk-16-2.png)
+![](capstone_report_files/figure-markdown_github/unnamed-chunk-17-1.png)![](capstone_report_files/figure-markdown_github/unnamed-chunk-17-2.png)
 
-The two-proportion z-test comparing males' arrest rate to females' gives a p-value of 2.2e-16, allowing us the reject the null hypothesis and say that the difference in arrest rate is statistically signficiant.
+The two-proportion z-test comparing males' arrest rate to females' gives a p-value of less than 2.2e-16, allowing us the reject the null hypothesis and say that the difference in arrest rate is statistically signficiant.
 
 ``` r
 addmargins(table(df_clean$driver_gender, df_clean$is_arrested, useNA = "ifany"))
@@ -872,11 +874,11 @@ res4
 
 ##### Race:
 
-When weighted using the Connecticut census populations, Blacks and Whites have the highest number of stops. ![](capstone_report_files/figure-markdown_github/unnamed-chunk-18-1.png)
+When weighted using the Connecticut census populations, Black drivers and White drivers have the highest percentage of stops. ![](capstone_report_files/figure-markdown_github/unnamed-chunk-19-1.png)
 
-However, when looking at the ratio of arrests/stops, Hispanics and Blacks have the highest ratios. ![](capstone_report_files/figure-markdown_github/unnamed-chunk-19-1.png)
+However, when looking at the ratio of arrests/stops, Hispanic drivers and Black drivers have the highest ratios. ![](capstone_report_files/figure-markdown_github/unnamed-chunk-20-1.png)
 
-It is interesting to note that Hispanics are the third highest in terms of stop proportion when weighted by Census race population but have the highest arrest likelihood. In fact, the arrest/stop ratio of Hispanics is (0.03912443/0.02455756) = 1.593173 times more than the next highest ratio, which is the ratio for Blacks. With statistical tests, we see this result as being statistically signficant with a two-proportion z-test returning a p-value of 2.2e-16.
+It is interesting to note that Hispanic drivers are the third highest in terms of stop proportion when weighted by Census race population but have the highest arrest likelihood. In fact, the arrest/stop ratio of Hispanic drivers is (0.03912443/0.02455756) = 1.593173 times more than the next highest ratio, which is the ratio for Black drivers. With statistical tests, we see this result as being statistically signficant with a two-proportion z-test returning a p-value of less than 2.2e-16.
 
 ``` r
 race_table <- table(df_clean$driver_race_raw, df_clean$is_arrested, useNA = "ifany")
@@ -901,7 +903,7 @@ prop.test(x = as.vector(race_table2[,2]), n = as.vector(race_table2[,4]), altern
     ##     prop 1     prop 2 
     ## 0.03912443 0.02119216
 
-Additionally, we see that race and arrest status are not independent, with the chi-square independence test giving a p-value of 2.2e-16.
+Additionally, we see that race and arrest status are not independent, with the chi-square independence test giving a p-value of less than 2.2e-16.
 
 ``` r
 race_arrest_chi <- table(df_clean$driver_race_raw, df_clean$is_arrested, useNA = "ifany")
@@ -914,9 +916,9 @@ chisq.test(race_arrest_chi)
     ## data:  race_arrest_chi
     ## X-squared = 507.62, df = 8, p-value < 2.2e-16
 
-These results seem to lend support towards the concern that race, among other demographic factors, impacts arrest status outcome, at least within the Connecticut State Police. However, again, these results only show correlation, not causation, meaning the high arrests/stops ratio of Hispanics does not necessarily mean Hispanics are more likely to be arrested *because* of their race. Different groups could behave differently, leading to different arrest outcomes. For example, maybe a greater proportion of stopped Hispanics have committed violations that require arrests compared to other races. Or maybe police officers behave differently between different groups, indicating bias. Both explanations could be drawn conclusions from the discrepancies seen.
+These results seem to lend support towards the concern that race, among other demographic factors, impacts arrest status outcome, at least within the Connecticut State Police. However, again, these results only show correlation, not causation, meaning the high arrests/stops ratio of Hispanic drivers does not necessarily mean Hispanic drivers are more likely to be arrested *because* of their race. Different groups could behave differently, leading to different arrest outcomes. For example, maybe a greater proportion of stopped Hispanic drivers have committed violations that require arrests compared to other races. Or maybe police officers behave differently between different groups, indicating bias. Both explanations could be concluded from the arrests/stops ratio discrepancies observed between the different races.
 
-It is difficult to have a more nuanced understanding and thoroughly investigate these questions with the current dataset. One reason being the violation buckets are general such that the arrest outcome for each bucket varies depending on the specific offense, like "moving violation," as elaborated in the limitations section. Regardless, these finding should not be ignored. The Connecticut State Police department should track more granular data to gain clearer insights.
+It is difficult to have a more nuanced understanding and thoroughly investigate these questions with the current dataset. One reason being the violation buckets are general in such a way that the arrest outcome for each bucket varies depending on the specific offense, like "moving violation," as elaborated in the limitations section. Regardless, these finding should not be ignored. The Connecticut State Police department should track more granular data to gain clearer insights.
 
 ##### Race and Age:
 
@@ -929,9 +931,9 @@ ggboxplot(df_clean %>% filter(is_arrested == TRUE), x = "driver_race_raw", y = "
           xlab = "Driver Race", ylab = "Driver Age")
 ```
 
-![](capstone_report_files/figure-markdown_github/unnamed-chunk-22-1.png)
+![](capstone_report_files/figure-markdown_github/unnamed-chunk-23-1.png)
 
-Performing a t-test on the difference in mean ages of arrest for Hispanic and Black drivers versus the other races, confirms our observations, giving a p-value of 2.2e-16, meaning we favor the alternative hypothesis that says the mean age of arrest for Hispanics and Blacks is significantly lower than the other races.
+Performing a t-test on the difference in mean ages of arrest for Hispanic and Black drivers versus the other races, confirms our observations, giving a p-value of less than 2.2e-16, meaning we favor the alternative hypothesis that says the mean age of arrest for Hispanic drivers and Black drivers is significantly lower than the other races.
 
 ``` r
 df_clean$race2 <- vector(mode="character", length = nrow(df_clean))
@@ -981,7 +983,7 @@ ggplot(arrests_per_day %>% filter(is_arrested == TRUE), aes(as.numeric(day_of_mo
   scale_x_continuous(breaks = as.numeric(arrests_per_day$day_of_month), labels = as.character(arrests_per_day$day_of_month))
 ```
 
-![](capstone_report_files/figure-markdown_github/unnamed-chunk-24-1.png)
+![](capstone_report_files/figure-markdown_github/unnamed-chunk-25-1.png)
 
 ``` r
 end_of_month <- addmargins(table(df_clean$day_of_month, df_clean$is_arrested, useNA = "ifany"))
@@ -1011,7 +1013,7 @@ Some more temporal trends uncovered are; the arrests/stops ratios tend to be hig
 
 One more feature of interest worth mentioning is the arrests/stops ratio per county. As we can see from the graph below, there are some large discrepancies between some of the counties.
 
-![](capstone_report_files/figure-markdown_github/unnamed-chunk-26-1.png)
+![](capstone_report_files/figure-markdown_github/unnamed-chunk-27-1.png)
 
 Comparing the freeway and interstate volume traffic per county to the total number of arrests per county, shows some positive correlation, showing that certain counties have more highways and therefore more vehicles traveling through them, explaining the differing arrests/stops ratios.
 
@@ -1019,15 +1021,15 @@ As mentioned earlier, the data for freeway and interstate traffic volume comes f
 
 Total arrests per county:
 
-![](capstone_report_files/figure-markdown_github/unnamed-chunk-27-1.png)
+![](capstone_report_files/figure-markdown_github/unnamed-chunk-28-1.png)
 
 Total miles traveled-- interstate:
 
-![](capstone_report_files/figure-markdown_github/unnamed-chunk-28-1.png)
+![](capstone_report_files/figure-markdown_github/unnamed-chunk-29-1.png)
 
 Total miles traveled-- freeway:
 
-![](capstone_report_files/figure-markdown_github/unnamed-chunk-29-1.png)
+![](capstone_report_files/figure-markdown_github/unnamed-chunk-30-1.png)
 
 There is one obvious county that doesn't match up: New London. Further investigation is necessary to determine if the high number of arrests per stops is expected.
 
@@ -1252,7 +1254,7 @@ stops_arrested <- stops_clean3[,-8]
 
 #### Algorithms:
 
-A combination of 10-fold cross-validation and parameter fine-tuning was used to select the top performing model combination. Many of the Kappa and AUC values were similar between models so CART with Penalty Matrix was ultimately chosen because the Penalty Matrix handles the imbalanced dataset without manufacturing or removing observations like the other solutions. Because we want a higher penalty for false negatives, i.e., where the model labels an observation as having no arrest when there was one, because we're most concerned about accurately labeling arrests, our Penalty Matrix weights those error more heavily.
+A combination of 10-fold cross-validation and parameter fine-tuning was used to select the top performing model combination. Many of the Kappa and AUC values were similar between models so CART with Penalty Matrix was ultimately chosen because the Penalty Matrix handles the imbalanced dataset without manufacturing or removing observations like the other solutions. Because we want a higher penalty for false negatives, i.e., where the model labels an observation as having no arrest when there was one, because we're most concerned about accurately labeling arrests, our Penalty Matrix weights those errors more heavily.
 
 With cp = 0.01 being the best performing parameter for CART with Penalty Matrix, we get:
 
@@ -1277,7 +1279,7 @@ confusionMatrix(table(test_arrest$is_arrested, pred.cart.penalty.ft))$overall['K
 roc.curve(test_arrest$is_arrested, pred.cart.penalty.ft)
 ```
 
-![](capstone_report_files/figure-markdown_github/unnamed-chunk-43-1.png)
+![](capstone_report_files/figure-markdown_github/unnamed-chunk-44-1.png)
 
     ## Area under the curve (AUC): 0.693
 
@@ -1285,7 +1287,7 @@ roc.curve(test_arrest$is_arrested, pred.cart.penalty.ft)
 prp(cart.penalty.ft)
 ```
 
-![](capstone_report_files/figure-markdown_github/unnamed-chunk-43-2.png)
+![](capstone_report_files/figure-markdown_github/unnamed-chunk-44-2.png)
 
 ``` r
 print(cart.penalty.ft)
@@ -1320,7 +1322,7 @@ ROCperf_finalmodel <- performance(final_model_ROC, "tpr", "fpr")
 plot(ROCperf_finalmodel, colorize=TRUE, print.cutoffs.at=seq(0,0.1,by=0.01), text.adj=c(-0.2,1.7))
 ```
 
-![](capstone_report_files/figure-markdown_github/unnamed-chunk-44-1.png)
+![](capstone_report_files/figure-markdown_github/unnamed-chunk-45-1.png)
 
 ``` r
 confusionMatrix(table(test_arrest$is_arrested, final_model_pred[,2] >= 0.065))$overall['Kappa']
@@ -1333,7 +1335,7 @@ confusionMatrix(table(test_arrest$is_arrested, final_model_pred[,2] >= 0.065))$o
 roc.curve(test_arrest$is_arrested, final_model_pred[,2]>= 0.065)
 ```
 
-![](capstone_report_files/figure-markdown_github/unnamed-chunk-44-2.png)
+![](capstone_report_files/figure-markdown_github/unnamed-chunk-45-2.png)
 
     ## Area under the curve (AUC): 0.720
 
@@ -1364,9 +1366,9 @@ From our visual analysis, we saw statistically significant discrepancies in arre
     -   Some suggestions include; the contraband that was found, car descriptors, and more specific violation information.
     -   Once the data is collected, more visual analysis and algorithm testing can be done to try and uncover causation, by creating a better performing model.
 2.  Create training programs
-    -   Collecting more data might not be an immediately feasible task for every police department. One way to find the root of some of the demographic discrepancies uncovered in the visual analysis section is to change police behavior through training programs. If, after the training, the outcomes are the same, police behavior might not have been the problem. If outcomes do change, maybe it was.
-3.  Create outreach programs
-    -   While we cannot yet determine the cause of different arrest likelihoods amongst different demographic groups, the disparity exists and is likely felt by many of the communities. No amount of objective data collected can show personal experiences. Anecdotal evidence is an important part of understanding community feelings towards police officers. Creating outreach programs to foster positive relationships and share experiences is a powerful way to address the impact of those disparities and an important part of police being able to do their jobs well.
+    -   Collecting more data might not be an immediately feasible task for every police department. One way to find the root of some of the demographic discrepancies uncovered in the visual analysis section is to attempt to change police behavior through training programs. If, after the training, the outcomes are the same, police behavior might not have been the problem.
+3.  Create outreach programs and collect subjective data
+    -   While we cannot yet determine the cause of different arrest likelihoods amongst different demographic groups, the disparity exists and is likely felt by many of the communities. No amount of objective data collected can show personal experiences. Anecdotal evidence is an important part of understanding community feelings towards police officers. Creating outreach programs to foster positive relationships and share experiences is a powerful way to address the impact of those disparities and an important part of police being able to do their jobs well. Additionally, collecting data on the anecdotal evidence via surveys, interviews, or some other method, could be a great way to gain a more holistic understanding of the currently available data.
 
 ### Appendix
 

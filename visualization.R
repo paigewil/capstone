@@ -1546,6 +1546,12 @@ ggplot(searches_conducted, aes(Search_Conducted, arrests_to_pop, fill = Arrested
   labs(title = "Ratio of arrests/stops by search conducted", x = "Search Conducted", y = "Arrests/Stops") +
   scale_y_continuous(labels = scales::percent)
 ggsave("./EDA_images/81_arrests_to_stops_search_conducted.png")
+
+sc_nums <- ggplot(searches_conducted, aes(Search_Conducted, arrests_to_pop, fill = Arrested)) + geom_bar(stat = "identity", position = "dodge")
+plt_sc_nums <- ggplot_build(sc_nums)
+plt_sc_nums$data[[1]]
+# 0.274193548/0.018669994 => 14.68632
+
 ggplot(searches_conducted %>% filter(Arrested == TRUE), aes(Search_Conducted, arrests_to_pop)) +
   geom_bar(stat = "identity", fill = "#1E90FF") +
   labs(title = "Ratio of stops that end in arrest by search conducted", x = "Search Conducted", y = "Arrests/Stops") +
@@ -1608,6 +1614,8 @@ ggplot(search_conducted2 %>% filter(Search_Conducted == TRUE), aes(Contraband_Fo
   labs(title = "Ratio of arrests/stops by Contraband Found status \nfor Search Conducted = TRUE", x = "Contraband Found", y = "Arrests/Stops") +
   scale_y_continuous(labels = scales::percent)
 ggsave("./EDA_images/81_additional_arrests_to_stops_search_conducted.png")
+
+
 
 # Notes: Most stops don’t end in arrest, regardless of whether a search was 
 #        conducted. However, if a search was conducted, there is 14.69 times more of 
@@ -1759,6 +1767,7 @@ ggplot(df_clean, aes(stop_duration, ..prop.., group = 1)) +
 #        Stops that take longer than 30 minutes are more likely to have ended in an 
 #        arrest, which makes sense because intuitively, the arresting process will 
 #        take longer.
+
 
 #violation count:
 violation_counts <- setNames(data.frame(table(df_clean$violation_count, df_clean$is_arrested, exclude = NULL)), c("Violation_Count", "Arrested", "count")) 
@@ -2582,3 +2591,291 @@ ggplot(gcounty_commute %>% filter(is.na(prop) == FALSE & samecounty == 1)) +
   geom_text(data = county_label, aes(x = avg_long, y = avg_lat, label = c_name)) +
   scale_fill_gradientn(colours = brewer.pal(n=9, name = "YlGnBu"))
 ggsave("./EDA_images/122_commute_win_per_county.png")
+
+
+#------------------------------------------------------------------------
+#Exploring demographic information against the high performing variables
+#from the ML section
+
+# stop duration and race by arrest
+sd_race <- setNames(data.frame(table(df_clean$stop_duration, df_clean$driver_race_raw, df_clean$is_arrested, exclude = NULL)), c("Stop_Duration", "Race", "Arrested", "count")) 
+sd_race_total <- sd_race %>% group_by(Stop_Duration, Race) %>% dplyr::summarise(total_count = sum(count))
+sd_race <- left_join(sd_race, sd_race_total, by = c("Stop_Duration", "Race"))
+sd_race <- sd_race %>% mutate(arrests_to_pop = count/total_count)
+
+ggplot(sd_race %>% filter(Arrested == TRUE), aes(Race, arrests_to_pop, fill = Race)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(.~ Stop_Duration)
+ggsave("./EDA_images/126_arrest_rate_stop_duration_race.png")
+
+# Not this way because can't get arrest/stop proportion
+# df_clean_arrested <- df_clean %>% filter(is_arrested == TRUE)
+# sd_race2 <- setNames(data.frame(table(df_clean_arrested$stop_duration, df_clean_arrested$driver_race_raw, exclude = NULL)), c("Stop_Duration", "Race", "count")) 
+# sd_race_total2 <- sd_race2 %>% group_by(Race) %>% dplyr::summarise(total_count = sum(count))
+# sd_race2 <- left_join(sd_race2, sd_race_total2, by = "Race")
+# sd_race2 <- sd_race2 %>% mutate(arrests_to_pop = count/total_count)
+# 
+# ggplot(sd_race2, aes(Race, arrests_to_pop, fill = Race)) +
+#   geom_bar(stat = "identity", position = "dodge") +
+#   facet_grid(.~ Stop_Duration)
+
+
+# stop duration and gender by arrest
+sd_gender <- setNames(data.frame(table(df_clean$stop_duration, df_clean$driver_gender, df_clean$is_arrested, exclude = NULL)), c("Stop_Duration", "Gender", "Arrested", "count")) 
+sd_gender_total <- sd_gender %>% group_by(Stop_Duration, Gender) %>% dplyr::summarise(total_count = sum(count))
+sd_gender <- left_join(sd_gender, sd_gender_total, by = c("Stop_Duration", "Gender"))
+sd_gender <- sd_gender %>% mutate(arrests_to_pop = count/total_count)
+
+ggplot(sd_gender %>% filter(Arrested == TRUE), aes(Gender, arrests_to_pop, fill = Gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(.~ Stop_Duration)
+ggsave("./EDA_images/127_arrest_rate_stop_duration_gender.png")
+
+
+# search conducted and race by arrest
+sc_race <- setNames(data.frame(table(df_clean$search_conducted, df_clean$driver_race_raw, df_clean$is_arrested, exclude = NULL)), c("Search_Conducted", "Race", "Arrested", "count")) 
+sc_race_total <- sc_race %>% group_by(Search_Conducted, Race) %>% dplyr::summarise(total_count = sum(count))
+sc_race <- left_join(sc_race, sc_race_total, by = c("Search_Conducted", "Race"))
+sc_race <- sc_race %>% mutate(arrests_to_pop = count/total_count)
+
+ggplot(sc_race %>% filter(Arrested == TRUE), aes(Race, arrests_to_pop, fill = Race)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(.~ Search_Conducted)
+ggsave("./EDA_images/128_arrest_rate_search_conducted_race.png")
+
+
+sc_race2 <- setNames(data.frame(table(df_clean_arrested$search_conducted, df_clean_arrested$driver_race_raw, exclude = NULL)), c("Search_Conducted", "Race", "count")) 
+sc_race_total2 <- sc_race2 %>% group_by(Race) %>% dplyr::summarise(total_count = sum(count))
+sc_race2 <- left_join(sc_race2, sc_race_total2, by = "Race")
+sc_race2 <- sc_race2 %>% mutate(arrests_to_pop = count/total_count)
+
+ggplot(sc_race2, aes(Race, arrests_to_pop, fill = Race)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(.~ Search_Conducted)
+
+
+# search type raw and race by arrest
+str_race <- setNames(data.frame(table(df_clean$search_type_raw, df_clean$driver_race_raw, df_clean$is_arrested, exclude = NULL)), c("Search_Type", "Race", "Arrested", "count")) 
+str_race_total <- str_race %>% group_by(Search_Type, Race) %>% dplyr::summarise(total_count = sum(count))
+str_race <- left_join(str_race, str_race_total, by = c("Search_Type", "Race"))
+str_race <- str_race %>% mutate(arrests_to_pop = count/total_count)
+
+ggplot(str_race %>% filter(Arrested == TRUE), aes(Race, arrests_to_pop, fill = Race)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(.~ Search_Type)
+ggsave("./EDA_images/129_arrest_rate_search_type_race.png")
+
+
+# contraband found and race by arrest
+cf_race <- setNames(data.frame(table(df_clean$contraband_found, df_clean$driver_race_raw, df_clean$is_arrested, exclude = NULL)), c("Contraband_Found", "Race", "Arrested", "count")) 
+cf_race_total <- cf_race %>% group_by(Contraband_Found, Race) %>% dplyr::summarise(total_count = sum(count))
+cf_race <- left_join(cf_race, cf_race_total, by = c("Contraband_Found", "Race"))
+cf_race <- cf_race %>% mutate(arrests_to_pop = count/total_count)
+
+ggplot(cf_race %>% filter(Arrested == TRUE), aes(Race, arrests_to_pop, fill = Race)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(.~ Contraband_Found)
+ggsave("./EDA_images/130_arrest_rate_contraband_found_race.png")
+
+
+#stop_hour_part_of_day and race by arrest
+df_clean_hr <- df_clean
+df_clean_hr$stop_time_hour <- df_clean_hr$stop_time
+df_clean_hr$stop_time_hour[df_clean_hr$stop_time_hour == "0:00"] <- NA
+df_clean_hr$stop_time_hour <- sub(":.*", "", df_clean_hr$stop_time_hour)
+
+# grouping hour into times of day since 24 levels might be too granular
+df_clean_hr$stop_time_hour_numeric <- as.numeric(df_clean_hr$stop_time_hour)
+df_clean_hr$stop_hour_part_of_day <- vector(mode = "character", length = nrow(df_clean_hr))
+df_clean_hr$stop_hour_part_of_day[df_clean_hr$stop_time_hour_numeric >= 0 & df_clean_hr$stop_time_hour_numeric < 6] <- "time_block1"
+df_clean_hr$stop_hour_part_of_day[df_clean_hr$stop_time_hour_numeric >= 6 & df_clean_hr$stop_time_hour_numeric < 12] <- "time_block2"
+df_clean_hr$stop_hour_part_of_day[df_clean_hr$stop_time_hour_numeric >= 12 & df_clean_hr$stop_time_hour_numeric < 18] <- "time_block3"
+df_clean_hr$stop_hour_part_of_day[df_clean_hr$stop_time_hour_numeric >= 18 & df_clean_hr$stop_time_hour_numeric <= 23] <- "time_block4"
+df_clean_hr$stop_hour_part_of_day[df_clean_hr$stop_hour_part_of_day == ""] <- NA
+df_clean_hr$stop_hour_part_of_day <- factor(df_clean_hr$stop_hour_part_of_day)
+
+
+pod_race <- setNames(data.frame(table(df_clean_hr$stop_hour_part_of_day, df_clean_hr$driver_race_raw, df_clean_hr$is_arrested, exclude = NULL)), c("time_block", "Race", "Arrested", "count")) 
+pod_race_total <- pod_race %>% group_by(time_block, Race) %>% dplyr::summarise(total_count = sum(count))
+pod_race <- left_join(pod_race, pod_race_total, by = c("time_block", "Race"))
+pod_race <- pod_race %>% mutate(arrests_to_pop = count/total_count)
+
+ggplot(pod_race %>% filter(Arrested == TRUE), aes(Race, arrests_to_pop, fill = Race)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(.~ time_block)
+ggsave("./EDA_images/131_arrest_rate_hr_pod_race.png")
+
+
+#violation_raw_Registration
+#df_split_vr <- df_split %>% filter(violation_raw_Registration == 1)
+#df_split_arrest <- df_split %>% filter(is_arrested == TRUE)
+
+vr_race <- setNames(data.frame(table(df_split$violation_raw_Registration, df_split$driver_race_raw, df_split$is_arrested, exclude = NULL)), c("Registration_Violation", "Race", "Arrested", "count")) 
+vr_race_total <- vr_race %>% group_by(Registration_Violation, Race) %>% dplyr::summarise(total_count = sum(count))
+vr_race <- left_join(vr_race, vr_race_total, by = c("Registration_Violation", "Race"))
+vr_race <- vr_race %>% mutate(arrests_to_pop = count/total_count)
+
+ggplot(vr_race %>% filter(Arrested == TRUE), aes(Race, arrests_to_pop, fill = Race)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(.~ Registration_Violation)
+ggsave("./EDA_images/132_arrest_rate_viol_registration_race.png")
+
+
+# Similar/same option
+df_split_vr <- df_split %>% filter(violation_raw_Registration == 1)
+vr_race2 <- setNames(data.frame(table(df_split_vr$driver_race_raw, df_split_vr$is_arrested, exclude = NULL)), c("Race", "Arrested", "count")) 
+vr_race_total2 <- vr_race2 %>% group_by(Race) %>% dplyr::summarise(total_count = sum(count))
+vr_race2 <- left_join(vr_race2, vr_race_total2, by = "Race")
+vr_race2 <- vr_race2 %>% mutate(arrests_to_pop = count/total_count)
+
+ggplot(vr_race2 %>% filter(Arrested == TRUE), aes(Race, arrests_to_pop, fill = Race)) +
+  geom_bar(stat = "identity", position = "dodge")
+
+
+#violation_raw_Other
+vo_race <- setNames(data.frame(table(df_split$violation_raw_Other, df_split$driver_race_raw, df_split$is_arrested, exclude = NULL)), c("Other_Violation", "Race", "Arrested", "count")) 
+vo_race_total <- vo_race %>% group_by(Other_Violation, Race) %>% dplyr::summarise(total_count = sum(count))
+vo_race <- left_join(vo_race, vo_race_total, by = c("Other_Violation", "Race"))
+vo_race <- vo_race %>% mutate(arrests_to_pop = count/total_count)
+
+ggplot(vo_race %>% filter(Arrested == TRUE), aes(Race, arrests_to_pop, fill = Race)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(.~ Other_Violation)
+ggsave("./EDA_images/133_arrest_rate_viol_other_race.png")
+
+
+#violation_raw_Moving.Violation
+vmv_race <- setNames(data.frame(table(df_split$violation_raw_Moving.Violation, df_split$driver_race_raw, df_split$is_arrested, exclude = NULL)), c("Moving_Violation", "Race", "Arrested", "count")) 
+vmv_race_total <- vmv_race %>% group_by(Moving_Violation, Race) %>% dplyr::summarise(total_count = sum(count))
+vmv_race <- left_join(vmv_race, vmv_race_total, by = c("Moving_Violation", "Race"))
+vmv_race <- vmv_race %>% mutate(arrests_to_pop = count/total_count)
+
+ggplot(vmv_race %>% filter(Arrested == TRUE), aes(Race, arrests_to_pop, fill = Race)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(.~ Moving_Violation)
+ggsave("./EDA_images/134_arrest_rate_viol_moving_race.png")
+
+
+# Compare to a non-important violation
+#violation_raw_Window.Tint
+vwt_race <- setNames(data.frame(table(df_split$violation_raw_Window.Tint, df_split$driver_race_raw, df_split$is_arrested, exclude = NULL)), c("WindowTint_Violation", "Race", "Arrested", "count")) 
+vwt_race_total <- vwt_race %>% group_by(WindowTint_Violation, Race) %>% dplyr::summarise(total_count = sum(count))
+vwt_race <- left_join(vwt_race, vwt_race_total, by = c("WindowTint_Violation", "Race"))
+vwt_race <- vwt_race %>% mutate(arrests_to_pop = count/total_count)
+
+ggplot(vwt_race %>% filter(Arrested == TRUE), aes(Race, arrests_to_pop, fill = Race)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(.~ WindowTint_Violation)
+ggsave("./EDA_images/135_arrest_rate_viol_window_tint_race.png")
+
+
+#violation_raw_Traffic.Control.Signal
+vtcs_race <- setNames(data.frame(table(df_split$violation_raw_Traffic.Control.Signal, df_split$driver_race_raw, df_split$is_arrested, exclude = NULL)), c("TCS_Violation", "Race", "Arrested", "count")) 
+vtcs_race_total <- vtcs_race %>% group_by(TCS_Violation, Race) %>% dplyr::summarise(total_count = sum(count))
+vtcs_race <- left_join(vtcs_race, vtcs_race_total, by = c("TCS_Violation", "Race"))
+vtcs_race <- vtcs_race %>% mutate(arrests_to_pop = count/total_count)
+
+ggplot(vtcs_race %>% filter(Arrested == TRUE), aes(Race, arrests_to_pop, fill = Race)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(.~ TCS_Violation)
+ggsave("./EDA_images/136_arrest_rate_viol_tcs_race.png")
+
+
+#violation_raw_Cell.Phone
+vcp_race <- setNames(data.frame(table(df_split$violation_raw_Cell.Phone, df_split$driver_race_raw, df_split$is_arrested, exclude = NULL)), c("Cell_Phone", "Race", "Arrested", "count")) 
+vcp_race_total <- vcp_race %>% group_by(Cell_Phone, Race) %>% dplyr::summarise(total_count = sum(count))
+vcp_race <- left_join(vcp_race, vcp_race_total, by = c("Cell_Phone", "Race"))
+vcp_race <- vcp_race %>% mutate(arrests_to_pop = count/total_count)
+
+ggplot(vcp_race %>% filter(Arrested == TRUE), aes(Race, arrests_to_pop, fill = Race)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(.~ Cell_Phone)
+ggsave("./EDA_images/137_arrest_rate_viol_cp_race.png")
+
+
+#violation_raw_Defective.Lights
+vdl_race <- setNames(data.frame(table(df_split$violation_raw_Defective.Lights, df_split$driver_race_raw, df_split$is_arrested, exclude = NULL)), c("Defective_Lights", "Race", "Arrested", "count")) 
+vdl_race_total <- vdl_race %>% group_by(Defective_Lights, Race) %>% dplyr::summarise(total_count = sum(count))
+vdl_race <- left_join(vdl_race, vdl_race_total, by = c("Defective_Lights", "Race"))
+vdl_race <- vdl_race %>% mutate(arrests_to_pop = count/total_count)
+
+ggplot(vdl_race %>% filter(Arrested == TRUE), aes(Race, arrests_to_pop, fill = Race)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(.~ Defective_Lights)
+ggsave("./EDA_images/138_arrest_rate_viol_dl_race.png")
+
+
+#violation_raw_Display.Of.Plates
+vdop_race <- setNames(data.frame(table(df_split$violation_raw_Display.of.Plates, df_split$driver_race_raw, df_split$is_arrested, exclude = NULL)), c("Display.Of.Plates", "Race", "Arrested", "count")) 
+vdop_race_total <- vdop_race %>% group_by(Display.Of.Plates, Race) %>% dplyr::summarise(total_count = sum(count))
+vdop_race <- left_join(vdop_race, vdop_race_total, by = c("Display.Of.Plates", "Race"))
+vdop_race <- vdop_race %>% mutate(arrests_to_pop = count/total_count)
+
+ggplot(vdop_race %>% filter(Arrested == TRUE), aes(Race, arrests_to_pop, fill = Race)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(.~ Display.Of.Plates)
+ggsave("./EDA_images/139_arrest_rate_viol_dop_race.png")
+
+
+#violation_raw_Equipment.Violation
+vev_race <- setNames(data.frame(table(df_split$violation_raw_Equipment.Violation, df_split$driver_race_raw, df_split$is_arrested, exclude = NULL)), c("Equipment.Violation", "Race", "Arrested", "count")) 
+vev_race_total <- vev_race %>% group_by(Equipment.Violation, Race) %>% dplyr::summarise(total_count = sum(count))
+vev_race <- left_join(vev_race, vev_race_total, by = c("Equipment.Violation", "Race"))
+vev_race <- vev_race %>% mutate(arrests_to_pop = count/total_count)
+
+ggplot(vev_race %>% filter(Arrested == TRUE), aes(Race, arrests_to_pop, fill = Race)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(.~ Equipment.Violation)
+ggsave("./EDA_images/140_arrest_rate_viol_ev_race.png")
+
+
+#violation_raw_Seatbelt
+vsb_race <- setNames(data.frame(table(df_split$violation_raw_Seatbelt, df_split$driver_race_raw, df_split$is_arrested, exclude = NULL)), c("Seatbelt", "Race", "Arrested", "count")) 
+vsb_race_total <- vsb_race %>% group_by(Seatbelt, Race) %>% dplyr::summarise(total_count = sum(count))
+vsb_race <- left_join(vsb_race, vsb_race_total, by = c("Seatbelt", "Race"))
+vsb_race <- vsb_race %>% mutate(arrests_to_pop = count/total_count)
+
+ggplot(vsb_race %>% filter(Arrested == TRUE), aes(Race, arrests_to_pop, fill = Race)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(.~ Seatbelt)
+ggsave("./EDA_images/141_arrest_rate_viol_sb_race.png")
+
+
+#violation_raw_Speed.Related
+vsr_race <- setNames(data.frame(table(df_split$violation_raw_Speed.Related, df_split$driver_race_raw, df_split$is_arrested, exclude = NULL)), c("Speed.Related", "Race", "Arrested", "count")) 
+vsr_race_total <- vsr_race %>% group_by(Speed.Related, Race) %>% dplyr::summarise(total_count = sum(count))
+vsr_race <- left_join(vsr_race, vsr_race_total, by = c("Speed.Related", "Race"))
+vsr_race <- vsr_race %>% mutate(arrests_to_pop = count/total_count)
+
+ggplot(vsr_race %>% filter(Arrested == TRUE), aes(Race, arrests_to_pop, fill = Race)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(.~ Speed.Related)
+ggsave("./EDA_images/142_arrest_rate_viol_sr_race.png")
+
+
+#violation_raw_Stop.Sign
+vss_race <- setNames(data.frame(table(df_split$violation_raw_Stop.Sign, df_split$driver_race_raw, df_split$is_arrested, exclude = NULL)), c("Stop.Sign", "Race", "Arrested", "count")) 
+vss_race_total <- vss_race %>% group_by(Stop.Sign, Race) %>% dplyr::summarise(total_count = sum(count))
+vss_race <- left_join(vss_race, vss_race_total, by = c("Stop.Sign", "Race"))
+vss_race <- vss_race %>% mutate(arrests_to_pop = count/total_count)
+
+ggplot(vss_race %>% filter(Arrested == TRUE), aes(Race, arrests_to_pop, fill = Race)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(.~ Stop.Sign)
+ggsave("./EDA_images/143_arrest_rate_viol_ss_race.png")
+
+
+#violation_raw_Suscpended.License
+vsl_race <- setNames(data.frame(table(df_split$violation_raw_Suspended.License, df_split$driver_race_raw, df_split$is_arrested, exclude = NULL)), c("Suscpended.License", "Race", "Arrested", "count")) 
+vsl_race_total <- vsl_race %>% group_by(Suscpended.License, Race) %>% dplyr::summarise(total_count = sum(count))
+vsl_race <- left_join(vsl_race, vsl_race_total, by = c("Suscpended.License", "Race"))
+vsl_race <- vsl_race %>% mutate(arrests_to_pop = count/total_count)
+
+ggplot(vsl_race %>% filter(Arrested == TRUE), aes(Race, arrests_to_pop, fill = Race)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(.~ Suscpended.License)
+ggsave("./EDA_images/144_arrest_rate_viol_sl_race.png")
+
+
+# => Regardless of the "importance" of the violation in terms of the ML algorithms,
+#    Hispanics always seem to ahve a higher arrest/stop proportion
