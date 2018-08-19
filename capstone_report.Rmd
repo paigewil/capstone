@@ -438,7 +438,7 @@ race_table2 <- race_table2[c(1,2),]
 prop.test(x = as.vector(race_table2[,2]), n = as.vector(race_table2[,4]), alternative = "greater")
 ```
 
-Additionally, we see that race and arrest status are not independent, with the chi-square independence test giving a p-value of less than 2.2e-16.
+Additionally, we see that race and arrest status are not independent, with the chi-square independence test giving a p-value of less than 2.2e-16. 
 ```{r, message = FALSE}
 race_arrest_chi <- table(df_clean$driver_race_raw, df_clean$is_arrested, useNA = "ifany")
 chisq.test(race_arrest_chi)
@@ -460,7 +460,6 @@ ggplot(sd_race %>% filter(Arrested == TRUE), aes(Race, arrests_to_pop, fill = Ra
   labs(title = "Arrests/stops by race and stop duration", x = "Race/Stop Duration", y = "Arrests/stops") +
   scale_y_continuous(labels = scales::percent) +
   theme1
-ggsave("./EDA_images/126_arrest_rate_stop_duration_race.png")
 ```
 
 With our current dataset, it is difficult to have a more nuanced understanding and thoroughly investigate all the aforementioned questions. One reason being the violation buckets are general in such a way that the arrest outcome for each bucket varies depending on the specific offense, like "moving violation," as elaborated in the limitations section. Regardless, these finding should not be ignored. The Connecticut State Police department should track more granular data to gain clearer insights. 
