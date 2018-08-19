@@ -697,7 +697,7 @@ df_clean <- df_clean %>% mutate(driver_age = replace(driver_age, driver_age == "
 df_clean <- df_clean %>% mutate(driver_age = replace(driver_age, driver_age >= 80, NA))
 ```
 
-In the driver\_race column, races in driver\_race\_raw are bucketed into an "other" column. This was done by The Stanford Open Policing Project to [standardize driver race](https://github.com/5harad/openpolicing/blob/master/DATA-README.md) throughout the states, but since we're only investigating one state, to avoid loss of information, driver\_race\_raw will be used.
+In the driver\_race column, races in driver\_race\_raw are bucketed into an "other" column. This was done by The Stanford Open Policing Project to [standardize driver race](https://github.com/5harad/openpolicing/blob/master/DATA-README.md) (Pierson et al. 2017) throughout the states, but since we're only investigating one state, to avoid loss of information, driver\_race\_raw will be used.
 
 There was no distinct difference between the columns, search\_type\_raw and search\_type or violation and violation\_raw, so search\_type\_raw and violation\_raw will be used, keeping the columns from the original Connecticut data.
 
@@ -836,7 +836,7 @@ These results seem to indicate that while having a search conducted during a sto
 
 In the image below, we see that most stops where contraband was found don't end in arrest. ![](capstone_report_files/figure-markdown_github/unnamed-chunk-16-1.png)
 
-For some context, \[in the summer of 2015\] (<https://connecticut.cbslocal.com/2015/06/30/connecticut-eases-penalties-for-most-drug-possession-crimes/>), after the time period of this dataset, drug possession crime sentences were reduced to misdemeanors in Connecticut. Additionally, in 2011, Connecticut "decriminalized small amounts of marijuana" (Collins 2015). The high proportion of non-arrests for stops where contraband is found might mean either officers were not enforcing the law properly or a large number of the contraband found was small amounts of marijuana or another misdemeanor contraband. This is a good example of the desirability for more data, in this case, a feature detailing the contraband that was found. Ultimately, with the current data available, it is difficult to know if these results indicate police behavior that needs investigation or a confirmation of proper law enforcement.
+For some context, [in the summer of 2015](https://connecticut.cbslocal.com/2015/06/30/connecticut-eases-penalties-for-most-drug-possession-crimes/) (Collins 2015), after the time period of this dataset, drug possession crime sentences were reduced to misdemeanors in Connecticut. Additionally, in 2011, Connecticut "decriminalized small amounts of marijuana" (Collins 2015). The high proportion of non-arrests for stops where contraband is found might mean either officers were not enforcing the law properly or a large number of the contraband found was small amounts of marijuana or another misdemeanor contraband. This is a good example of the desirability for more data, in this case, a feature detailing the contraband that was found. Ultimately, with the current data available, it is difficult to know if these results indicate police behavior that needs investigation or a confirmation of proper law enforcement.
 
 Now that we've investigated features more closely related to the stop itself and seen that the results either align with our understanding of Connecticut law and policing or need more information to understand, let's investigate the impact of demographic features on arrest status.
 
