@@ -597,7 +597,7 @@ mean(unlist(df_cv_results_rf[2,]))
 
 
 
-# RF with Over
+# RF with Over- redo
 # cv_results_rf_over <- lapply(folds, function(x) {
 #   arrest_train <- stops_arrested[-x, ]
 #   arrest_test <- stops_arrested[x, ]
