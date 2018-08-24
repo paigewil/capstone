@@ -597,7 +597,9 @@ _\*For more visualizations and associated statistics, see the R scripts in GitHu
 ### Machine Learning
 
 #### Approach:
-Since our main question is one of classification; predicting whether a Connecticut State Police traffic stop ends in arrest or not, a supervised classification machine learning algorithm is necessary. Our outcome variable is is_arrested while a data wrangled subset of the remaining variables in our original dataset make up the predictors. The details of the data wrangling and NA handling are enumerated below, however, a comprehensive list of the 27 predictor variables used in the final algorithm is as follows: 
+Since our main question is one of classification; predicting whether a Connecticut State Police traffic stop ends in arrest or not, a supervised classification machine learning algorithm is necessary. Our outcome variable is is_arrested while a data wrangled subset of the remaining variables in our original dataset make up the predictors. We used almost all of the remaining variables because, as we saw in the visualization and statistics section, all the variables tested had a statistically significant relationship with our outcome variable, making it difficult to pare down. Feature selection was explored, but the results did not yield noticeable changes to performance.   
+
+The details of the data wrangling and NA handling are enumerated below, however, a comprehensive list of the 27 predictor variables used in the final algorithm is as follows: 
 
 * county_name
 * driver_gender
@@ -867,7 +869,7 @@ Through [statistical analysis](https://github.com/paigewil/capstone/blob/master/
 _\*For more on the machine learning algorithms tested, see the R script in GitHub, [here](https://github.com/paigewil/capstone/blob/master/machine_learning.R)._
 
 
-### Conclusion and Next Steps
+### Conclusion
 The overall learnings from the machine learning investigation is that the dataset we currently have does not contain the most relevant information for successfully predicting arrest status. Testing different algorithms and combinations, fine-tuning parameters, and feature selection didn’t do much to improve performance, further cementing this point. However, we still learned some important information. One of the overall questions of the project was to see if demographic factors play a role in arrest outcome of traffic stops. Because the important variables identified are not demographic and the models didn’t perform well regardless of what the important variables were, the answer to our question seems to be that demographic factors don’t play a large role in arrest status. In fact, none of the features in the dataset play a large role. However, this doesn’t mean that the features don’t relate in any way to arrest status. 
 
 From our visual analysis, we saw statistically significant discrepancies in arrest status between different demographic populations. However, those discrepancies highlight only correlation, not causation, which could explain why our machine learning algorithms didn't perform well. To gain a better-rounded, clearer understanding of what factors are at play in arrests and if implicit bias is present, more detailed data is needed. 
@@ -882,6 +884,14 @@ From our visual analysis, we saw statistically significant discrepancies in arre
     + Collecting more data might not be an immediately feasible task for every police department. One way to find the root of some of the demographic discrepancies uncovered in the visual analysis section is to attempt to change police behavior through training programs. If, after the training, the outcomes are the same, police behavior might not have been the problem.
 3. Create outreach programs and collect subjective data
     + While we cannot yet determine the cause of different arrest likelihoods amongst different demographic groups, the disparity exists and is likely felt by many of the communities. No amount of objective data collected can show personal experiences. Anecdotal evidence is an important part of understanding community feelings towards police officers. Creating outreach programs to foster positive relationships and share experiences is a powerful way to address the impact of those disparities and an important part of police being able to do their jobs well. Additionally, collecting data on the anecdotal evidence via surveys, interviews, or some other method, could be a great way to gain a more holistic understanding of the currently available data. 
+    
+#### Next Steps:
+
+* Conduct similar analysis throughout US
+    + Just because we couldn’t produce a good model for the Connecticut State Police traffic stops, doesn’t mean the currently available features aren’t good predictors in other police departments.
+* Create standard data collection procedures
+    + The Stanford Open Policing Project had to complete a lot of data standardization processes and some states did not have all features.
+    + To get a holistic report and provide comparisons, standard data that is collected the same way is necessary.
 
 
 ### Appendix
