@@ -626,6 +626,67 @@ mean(unlist(df_cv_results_rf[2,]))
 # mean(unlist(df_cv_results_rf_over[2,]))
 # # -> 
 
+# library(mlr)
+# train_arrest_task <- makeClassifTask(data = train_arrest, target = "is_arrested")
+# os_train_arrest <- oversample(train_arrest_task, 2)
+
+# testing upSample function
+os_train_arrest <- upSample(train_arrest[,-8], train_arrest[,8], yname = "is_arrested")
+table(os_train_arrest$is_arrested)
+# FALSE   TRUE 
+# 229335 229335
+
+table(train_arrest$is_arrested)
+# FALSE   TRUE 
+# 229335   5475 
+
+set.seed(123)
+cv_results_rf_over_test <- lapply(folds[1:10], function(x) {
+  arrest_train <- stops_arrested[-x, ]
+  arrest_test <- stops_arrested[x, ]
+  arrest.train.over <- upSample(arrest_train[,-8], arrest_train[,8], yname = "is_arrested")
+  tree.model <- randomForest(is_arrested ~ ., data = arrest.train.over, ntree = 50)
+  arrest.pred <- predict(tree.model, arrest_test, type = "class")
+  auc_val <- roc.curve(arrest_test$is_arrested, arrest.pred)$auc
+  kappa <- kappa2(data.frame(arrest_test$is_arrested, arrest.pred))$value
+  return(c(auc_val, kappa))
+})
+
+df_cv_results_rf_over_test <- data.frame(cv_results_rf_over_test)
+#AUC
+mean(unlist(df_cv_results_rf_over_test[1,]))
+# -> 0.7363104
+#Kappa
+mean(unlist(df_cv_results_rf_over_test[2,]))
+# -> 0.306312
+
+
+
+# set.seed(123)
+# #cv_results_rf_over_test <- lapply(folds, function(x) {
+# cv_results_rf_over_test <- lapply(folds[1:10], function(x) {
+# #cv_results_rf_over_test <- apply(folds, 2, function(x) {
+#  folds[x]
+#  x_group <- folds[x]
+#  #arrest_train <- stops_arrested[-x_group, ]
+#  #arrest_test <- stops_arrested[x_group, ]
+#  arrest_train <- stops_arrested[-x, ]
+#  arrest_test <- stops_arrested[x, ]
+#  #num =  2*nrow(arrest_train %>% filter(is_arrested == FALSE))
+#  num = 2*nrow(arrest_train[arrest_train$is_arrested == FALSE,])
+#  #num = 550402
+#  # => num = 2*0.9*nrow(stops_arrested[stops_arrested$is_arrested == FALSE,])
+#  #arrest.train.over <- ovun.sample(is_arrested ~., data = arrest_train, method = "over", N = num)$data
+#  arrest.train.over <- ovun.sample(is_arrested ~., data = stops_arrested[-x, ], method = "over", N = num)$data
+#  tree.model <- randomForest(is_arrested ~ ., data = arrest.train.over, ntree = 50)
+#  arrest.pred <- predict(tree.model, arrest_test, type = "class")
+#  auc_val <- roc.curve(arrest_test$is_arrested, arrest.pred)$auc
+#  kappa <- kappa2(data.frame(arrest_test$is_arrested, arrest.pred))$value
+#  return(c(auc_val, kappa))
+# })
+
+
+# Old method
 set.seed(123)
 f1.train <- stops_arrested[-folds$Fold01, ]
 f1.test <- stops_arrested[folds$Fold01, ]

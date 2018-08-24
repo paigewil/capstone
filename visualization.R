@@ -2605,7 +2605,10 @@ sd_race <- sd_race %>% mutate(arrests_to_pop = count/total_count)
 
 ggplot(sd_race %>% filter(Arrested == TRUE), aes(Race, arrests_to_pop, fill = Race)) +
   geom_bar(stat = "identity", position = "dodge") +
-  facet_grid(.~ Stop_Duration)
+  facet_grid(.~ Stop_Duration) +
+  labs(title = "Arrests/stops by race and stop duration", x = "Race/Stop Duration", y = "Arrests/stops") +
+  scale_y_continuous(labels = scales::percent) +
+  theme1
 ggsave("./EDA_images/126_arrest_rate_stop_duration_race.png")
 
 # Not this way because can't get arrest/stop proportion
