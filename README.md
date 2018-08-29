@@ -1,5 +1,13 @@
 # capstone
 This repository contains source data, code, generated plots, and supporting documentation for my Introduction to Data Science capstone project, completed through Springboard. 
+
+* Summary:
+The project covers the lifecycle of data science; beginning with data wrangling, then visual analysis, utilizing statistics to test hypotheses posed in the visual analysis section, and finally ending with machine learning. 
+
+Specifically, we investigate what factors, if any, predict which Connecticut State Police traffic stops end in arrest. And, which, if any, of those factors are demographic, indicating the possible prevalence of police profiling. 
+
+To this end, we tested multiple supervised machine learning classification models, ending up with a CART model that utilizes a Penalty Matrix to handle data imbalance. Demographic factors, such as gender and race were investigated more closely, particularly in the visual analysis section, where we uncovered some statistically significant differences in arrests/stops ratios between demographic groups. However, the final model was ultimately not a good performer, with a Kappa of 0.2849794 and an AUC value of 0.720. And in the end, it was determined that more data, ideally, more granualar data, is necessary to achieve a better performing predictor model. 
+
 * Documentation:
   * capstone_proposal files contain an introduction to the project and associated data, the problem, and the methods for completing the project
   * exploratory_data_analysis_report files contains a summarizing report of the univariate visual analysis done in visualization.R. It contains code, plots, and analysis and explanation.
