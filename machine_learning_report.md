@@ -66,7 +66,7 @@ stops_split_col <- stops_split[,c(3,4,6,10,12,13,15,17,18,20,21,22,23,24,27,29:4
 stops_split_col$stop_date <- as.POSIXct(stops_split_col$stop_date, "%Y-%m-%d", tz = "America/New_York")
 ```
 
-Here, we used the split dataframe, which one hot-encoded the violation\_raw column. This makes it easier to use the violation\_raw information in a machine learning algorithm.
+Here, we used the split dataframe, which has one hot-encoded violation\_raw columns, and was produced in the data wrangling [script](https://github.com/paigewil/capstone/blob/master/capstone_data_wrangling.R). This makes it easier to use the violation\_raw information in a machine learning algorithm.
 
 We need to do some data wrangling before we can apply the machine learning algorithms. For example, we need to regroup factor features so that they don't have too many levels, since some algorithms can't handle high-level factors. We also need to split up some features, extracting seperate pieces of information into new features:
 
@@ -124,6 +124,8 @@ stops_split_edit$stop_dom[stops_split_edit$day_of_month_numeric >= 11 & stops_sp
 stops_split_edit$stop_dom[stops_split_edit$day_of_month_numeric >= 21 & stops_split_edit$day_of_month_numeric <= 31] <- "third_third"
 stops_split_edit$stop_dom <- factor(stops_split_edit$stop_dom)
 ```
+
+*\*For more information on the statistics investigation, check out the script, [here](https://github.com/paigewil/capstone/blob/master/statistics.R).*
 
 ``` r
 # add day of week
@@ -252,7 +254,25 @@ train_arrest = stops_arrested[spl_cdp,]
 test_arrest = stops_arrested[-spl_cdp,]
 ```
 
-One hurdle in running algorithms with the dataset is that it is signficantly imbalanced, meaning we have a lot more non-arrests than arrests. Specifically, non-arrests make up 97.67% of the data. To account for the imbalance such that the machine learning algorithm doesn't predict False for every observation to get a high accuracy, we will test a number of different imbalance handling solutions with a number of algorithms to pick the best performing model.
+One hurdle in running algorithms with the dataset is that it is signficantly imbalanced, meaning we have a lot more non-arrests than arrests. Specifically, non-arrests make up 97.67% of the data, as we can see in the tables below:
+
+``` r
+table(stops_arrested$is_arrested)
+```
+
+    ## 
+    ##  FALSE   TRUE 
+    ## 305779   7300
+
+``` r
+prop.table(table(stops_arrested$is_arrested))
+```
+
+    ## 
+    ##     FALSE      TRUE 
+    ## 0.9766832 0.0233168
+
+To account for the imbalance such that the machine learning algorithm doesn't predict FALSE for every observation to get a high accuracy, we will test a number of different imbalance handling solutions with a number of algorithms to pick the best performing model.
 
 As a better measure of how good the model is at predicting the correct outcome, we will look at a combination of Kappa and AUC over accuracy because they are better measures for imbalanced data.
 
@@ -265,7 +285,7 @@ tree.smote <- rpart(is_arrested ~ ., data = train.smote)
 prp(tree.smote)
 ```
 
-![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-15-1.png)
+![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-16-1.png)
 
 ``` r
 print(tree.smote)
@@ -300,7 +320,7 @@ confusionMatrix(table(test_arrest$is_arrested, pred.tree.smote2))$overall['Kappa
 roc.curve(test_arrest$is_arrested, pred.tree.smote2)
 ```
 
-![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-16-1.png)
+![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-17-1.png)
 
     ## Area under the curve (AUC): 0.770
 
@@ -320,7 +340,7 @@ confusionMatrix(table(test_arrest$is_arrested, pred.rf.smote2))$overall['Kappa']
 roc.curve(test_arrest$is_arrested, pred.rf.smote2)
 ```
 
-![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-17-1.png)
+![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-18-1.png)
 
     ## Area under the curve (AUC): 0.762
 
@@ -344,7 +364,7 @@ confusionMatrix(table(test_arrest$is_arrested, pred.rf.over))$overall['Kappa']
 roc.curve(test_arrest$is_arrested, pred.rf.over)
 ```
 
-![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-18-1.png)
+![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-19-1.png)
 
     ## Area under the curve (AUC): 0.732
 
@@ -366,7 +386,7 @@ confusionMatrix(table(test_arrest$is_arrested, nb.predict.smote))$overall['Kappa
 roc.curve(test_arrest$is_arrested, nb.predict.smote)
 ```
 
-![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-19-1.png)
+![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-20-1.png)
 
     ## Area under the curve (AUC): 0.744
 
@@ -386,7 +406,7 @@ stops_arrest_tree_penalty <- rpart(is_arrested ~., data = train_arrest, parms = 
 prp(stops_arrest_tree_penalty)
 ```
 
-![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-21-1.png)
+![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-22-1.png)
 
 ``` r
 print(stops_arrest_tree_penalty)
@@ -423,7 +443,7 @@ confusionMatrix(table(test_arrest$is_arrested, PredictCARTPenalty2))$overall['Ka
 roc.curve(test_arrest$is_arrested, PredictCARTPenalty2)
 ```
 
-![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-21-2.png)
+![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-22-2.png)
 
     ## Area under the curve (AUC): 0.693
 
@@ -530,134 +550,32 @@ Over-sampling with RandomForest:
 
 ``` r
 set.seed(123)
-f1.train <- stops_arrested[-folds$Fold01, ]
-f1.test <- stops_arrested[folds$Fold01, ]
-f1.ovun <- ovun.sample(is_arrested ~., data = f1.train, method = "over", N = 2*nrow(f1.train[f1.train$is_arrested == FALSE,]))$data
-f1.model <- randomForest(is_arrested ~ ., data = f1.ovun, ntree = 30)
-f1.pred <- predict(f1.model, f1.test, type = "class")
-f1_auc_val <- roc.curve(f1.test$is_arrested, f1.pred)$auc
+cv_results_rf_over_test <- lapply(folds[1:10], function(x) {
+  arrest_train <- stops_arrested[-x, ]
+  arrest_test <- stops_arrested[x, ]
+  arrest.train.over <- upSample(arrest_train[,-8], arrest_train[,8], yname = "is_arrested")
+  tree.model <- randomForest(is_arrested ~ ., data = arrest.train.over, ntree = 50)
+  arrest.pred <- predict(tree.model, arrest_test, type = "class")
+  auc_val <- roc.curve(arrest_test$is_arrested, arrest.pred)$auc
+  kappa <- kappa2(data.frame(arrest_test$is_arrested, arrest.pred))$value
+  return(c(auc_val, kappa))
+})
 ```
 
 ``` r
-f1_kappa <- kappa2(data.frame(f1.test$is_arrested, f1.pred))$value
-
-f2.train <- stops_arrested[-folds$Fold02, ]
-f2.test <- stops_arrested[folds$Fold02, ]
-f2.ovun <- ovun.sample(is_arrested ~., data = f2.train, method = "over", N = 2*nrow(f2.train[f2.train$is_arrested == FALSE,]))$data
-f2.model <- randomForest(is_arrested ~ ., data = f2.ovun, ntree = 30)
-f2.pred <- predict(f2.model, f2.test, type = "class")
-f2_auc_val <- roc.curve(f2.test$is_arrested, f2.pred)$auc
-```
-
-``` r
-f2_kappa <- kappa2(data.frame(f2.test$is_arrested, f2.pred))$value
-
-f3.train <- stops_arrested[-folds$Fold03, ]
-f3.test <- stops_arrested[folds$Fold03, ]
-f3.ovun <- ovun.sample(is_arrested ~., data = f3.train, method = "over", N = 2*nrow(f3.train[f3.train$is_arrested == FALSE,]))$data
-f3.model <- randomForest(is_arrested ~ ., data = f3.ovun, ntree = 30)
-f3.pred <- predict(f3.model, f3.test, type = "class")
-f3_auc_val <- roc.curve(f3.test$is_arrested, f3.pred)$auc
-```
-
-``` r
-f3_kappa <- kappa2(data.frame(f3.test$is_arrested, f3.pred))$value
-
-f4.train <- stops_arrested[-folds$Fold04, ]
-f4.test <- stops_arrested[folds$Fold04, ]
-f4.ovun <- ovun.sample(is_arrested ~., data = f4.train, method = "over", N = 2*nrow(f4.train[f4.train$is_arrested == FALSE,]))$data
-f4.model <- randomForest(is_arrested ~ ., data = f4.ovun, ntree = 30)
-f4.pred <- predict(f4.model, f4.test, type = "class")
-f4_auc_val <- roc.curve(f4.test$is_arrested, f4.pred)$auc
-```
-
-``` r
-f4_kappa <- kappa2(data.frame(f4.test$is_arrested, f4.pred))$value
-
-f5.train <- stops_arrested[-folds$Fold05, ]
-f5.test <- stops_arrested[folds$Fold05, ]
-f5.ovun <- ovun.sample(is_arrested ~., data = f5.train, method = "over", N = 2*nrow(f5.train[f5.train$is_arrested == FALSE,]))$data
-f5.model <- randomForest(is_arrested ~ ., data = f5.ovun, ntree = 30)
-f5.pred <- predict(f5.model, f5.test, type = "class")
-f5_auc_val <- roc.curve(f5.test$is_arrested, f5.pred)$auc
-```
-
-``` r
-f5_kappa <- kappa2(data.frame(f5.test$is_arrested, f5.pred))$value
-
-f6.train <- stops_arrested[-folds$Fold06, ]
-f6.test <- stops_arrested[folds$Fold06, ]
-f6.ovun <- ovun.sample(is_arrested ~., data = f6.train, method = "over", N = 2*nrow(f6.train[f6.train$is_arrested == FALSE,]))$data
-f6.model <- randomForest(is_arrested ~ ., data = f6.ovun, ntree = 30)
-f6.pred <- predict(f6.model, f6.test, type = "class")
-f6_auc_val <- roc.curve(f6.test$is_arrested, f6.pred)$auc
-```
-
-``` r
-f6_kappa <- kappa2(data.frame(f6.test$is_arrested, f6.pred))$value
-
-f7.train <- stops_arrested[-folds$Fold07, ]
-f7.test <- stops_arrested[folds$Fold07, ]
-f7.ovun <- ovun.sample(is_arrested ~., data = f7.train, method = "over", N = 2*nrow(f7.train[f7.train$is_arrested == FALSE,]))$data
-f7.model <- randomForest(is_arrested ~ ., data = f7.ovun, ntree = 30)
-f7.pred <- predict(f7.model, f7.test, type = "class")
-f7_auc_val <- roc.curve(f7.test$is_arrested, f7.pred)$auc
-```
-
-``` r
-f7_kappa <- kappa2(data.frame(f7.test$is_arrested, f7.pred))$value
-
-f8.train <- stops_arrested[-folds$Fold08, ]
-f8.test <- stops_arrested[folds$Fold08, ]
-f8.ovun <- ovun.sample(is_arrested ~., data = f8.train, method = "over", N = 2*nrow(f8.train[f8.train$is_arrested == FALSE,]))$data
-f8.model <- randomForest(is_arrested ~ ., data = f8.ovun, ntree = 30)
-f8.pred <- predict(f8.model, f8.test, type = "class")
-f8_auc_val <- roc.curve(f8.test$is_arrested, f8.pred)$auc
-```
-
-``` r
-f8_kappa <- kappa2(data.frame(f8.test$is_arrested, f8.pred))$value
-
-f9.train <- stops_arrested[-folds$Fold09, ]
-f9.test <- stops_arrested[folds$Fold09, ]
-f9.ovun <- ovun.sample(is_arrested ~., data = f9.train, method = "over", N = 2*nrow(f9.train[f9.train$is_arrested == FALSE,]))$data
-f9.model <- randomForest(is_arrested ~ ., data = f9.ovun, ntree = 30)
-f9.pred <- predict(f9.model, f9.test, type = "class")
-f9_auc_val <- roc.curve(f9.test$is_arrested, f9.pred)$auc
-```
-
-``` r
-f9_kappa <- kappa2(data.frame(f9.test$is_arrested, f9.pred))$value
-
-f10.train <- stops_arrested[-folds$Fold10, ]
-f10.test <- stops_arrested[folds$Fold10, ]
-f10.ovun <- ovun.sample(is_arrested ~., data = f10.train, method = "over", N = 2*nrow(f10.train[f10.train$is_arrested == FALSE,]))$data
-f10.model <- randomForest(is_arrested ~ ., data = f10.ovun, ntree = 30)
-f10.pred <- predict(f10.model, f10.test, type = "class")
-f10_auc_val <- roc.curve(f10.test$is_arrested, f10.pred)$auc
-```
-
-``` r
-f10_kappa <- kappa2(data.frame(f10.test$is_arrested, f10.pred))$value
-
-
-combined_auc <- c(f1_auc_val, f2_auc_val, f3_auc_val, f4_auc_val, f5_auc_val, f6_auc_val, f7_auc_val, f8_auc_val, f9_auc_val, f10_auc_val)
-combined_kappa <- c(f1_kappa, f2_kappa, f3_kappa, f4_kappa, f5_kappa, f6_kappa, f7_kappa, f8_kappa, f9_kappa, f10_kappa)
-```
-
-``` r
+df_cv_results_rf_over_test <- data.frame(cv_results_rf_over_test)
 #AUC
-mean(combined_auc)
+mean(unlist(df_cv_results_rf_over_test[1,]))
 ```
 
-    ## [1] 0.7341902
+    ## [1] 0.7363104
 
 ``` r
 #Kappa
-mean(combined_kappa)
+mean(unlist(df_cv_results_rf_over_test[2,]))
 ```
 
-    ## [1] 0.2981418
+    ## [1] 0.306312
 
 SMOTE with Naive Bayes:
 
@@ -802,7 +720,7 @@ confusionMatrix(table(test_arrest$is_arrested, pred.rf.smote))$overall['Kappa']
 roc.curve(test_arrest$is_arrested, pred.rf.smote)
 ```
 
-![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-30-1.png)
+![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-31-1.png)
 
     ## Area under the curve (AUC): 0.764
 
@@ -810,7 +728,7 @@ roc.curve(test_arrest$is_arrested, pred.rf.smote)
 randomForest::varImpPlot(model.smote.rf)
 ```
 
-![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-30-2.png)
+![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-31-2.png)
 
 Random Forest with over-sampling and mtry = 27:
 
@@ -828,7 +746,7 @@ confusionMatrix(table(test_arrest$is_arrested, pred.rf.over.finetuned))$overall[
 roc.curve(test_arrest$is_arrested, pred.rf.over.finetuned)
 ```
 
-![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-31-1.png)
+![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-32-1.png)
 
     ## Area under the curve (AUC): 0.635
 
@@ -836,7 +754,7 @@ roc.curve(test_arrest$is_arrested, pred.rf.over.finetuned)
 varImpPlot(model.over.rf)
 ```
 
-![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-31-2.png)
+![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-32-2.png)
 
 CART with Penalty Matrix and cp = 0.01 (\*):
 
@@ -853,7 +771,7 @@ confusionMatrix(table(test_arrest$is_arrested, pred.cart.penalty.ft))$overall['K
 roc.curve(test_arrest$is_arrested, pred.cart.penalty.ft)
 ```
 
-![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-32-1.png)
+![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-33-1.png)
 
     ## Area under the curve (AUC): 0.693
 
@@ -861,7 +779,7 @@ roc.curve(test_arrest$is_arrested, pred.cart.penalty.ft)
 prp(cart.penalty.ft)
 ```
 
-![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-32-2.png)
+![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-33-2.png)
 
 ``` r
 print(cart.penalty.ft)
@@ -916,7 +834,7 @@ confusionMatrix(table(test_arrest_top_combo$is_arrested, predict_top_pm_combo))$
 roc.curve(test_arrest_top_combo$is_arrested, predict_top_pm_combo)
 ```
 
-![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-33-1.png)
+![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-34-1.png)
 
     ## Area under the curve (AUC): 0.715
 
@@ -963,7 +881,7 @@ confusionMatrix(table(test_arrest_ensemble$is_arrested, test_arrest_ensemble$pre
 roc.curve(test_arrest_ensemble$is_arrested, test_arrest_ensemble$pred_maj)
 ```
 
-![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-34-1.png)
+![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-35-1.png)
 
     ## Area under the curve (AUC): 0.625
 
@@ -979,7 +897,7 @@ ROCperf_finalmodel <- performance(final_model_ROC, "tpr", "fpr")
 plot(ROCperf_finalmodel, colorize=TRUE, print.cutoffs.at=seq(0,0.1,by=0.01), text.adj=c(-0.2,1.7))
 ```
 
-![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-35-1.png)
+![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-36-1.png)
 
 ``` r
 confusionMatrix(table(test_arrest$is_arrested, final_model_pred[,2] >= 0.065))$overall['Kappa']
@@ -992,7 +910,7 @@ confusionMatrix(table(test_arrest$is_arrested, final_model_pred[,2] >= 0.065))$o
 roc.curve(test_arrest$is_arrested, final_model_pred[,2]>= 0.065)
 ```
 
-![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-35-2.png)
+![](machine_learning_report_files/figure-markdown_github/unnamed-chunk-36-2.png)
 
     ## Area under the curve (AUC): 0.720
 
@@ -1000,4 +918,6 @@ This is our final model, leaving us with a Kappa of 0.2849794 and an AUC value o
 
 #### Conclusion:
 
-The overall learnings from the machine learning investigation is that the dataset we currently have does not contain the most relevant information for successfully predicting arrest status. Testing different algorithms and combinations, fine-tuning parameters, and feature selecting don’t do much to improve our models, further cementing this point. However, we still learned some important information. The overall question of the project was to see if demographic factors play a role in arrest outcome of traffic stops. Because the important variables identified are not demographic and the fact that the models don’t perform well regardless of what the important variables were, the answer to our question seems to be that demographic factors don’t play a large role in arrest status. In fact, none of the features in the dataset play a large role. However, this doesn’t mean that the features don’t play any role. From our visual analysis, we saw statistically significant discrepancies in arrest status between different demographic populations. To gain a better-rounded and clearer understanding of what factors are at play in arrests and if implicit bias is present, more data is needed to establish a better performing model.
+The overall learnings from the machine learning investigation is that the dataset we currently have does not contain the most relevant information for successfully predicting arrest status. Testing different algorithms and combinations, fine-tuning parameters, and feature selecting don’t do much to improve our models, further cementing this point. However, we still learned some important information. One of the main questions of the project was to see if demographic factors play a role in arrest outcome of traffic stops. Because the important variables identified are not demographic and the fact that the models don’t perform well regardless of what the important variables were, the answer to our question seems to be that demographic factors don’t play a large role in arrest status. In fact, none of the features in the dataset play a large role. However, this doesn’t mean that the features don’t play any role. From our visual analysis (script and summary report, [here](https://github.com/paigewil/capstone/blob/master/visualization.R) and [here](https://github.com/paigewil/capstone/blob/master/exploratory_data_analysis_report.md)), we saw statistically significant discrepancies in arrest status between different demographic populations. To gain a better-rounded and clearer understanding of what factors are at play in arrests and if implicit bias is present, more data is needed to establish a better performing model.
+
+<br />
