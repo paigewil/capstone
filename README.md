@@ -1,7 +1,8 @@
 # capstone
 This repository contains source data, code, generated plots, and supporting documentation for my Introduction to Data Science capstone project, completed through Springboard. 
 
-* Summary:
+##### Summary:
+
 The project covers the lifecycle of data science; beginning with data wrangling, then visual analysis, utilizing statistics to test hypotheses posed in the visual analysis section, and finally ending with machine learning. 
 
 Specifically, we investigate what factors, if any, predict which Connecticut State Police traffic stops end in arrest. And, which, if any, of those factors are demographic, indicating the possible prevalence of police profiling. 
