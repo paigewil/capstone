@@ -687,7 +687,7 @@ df_clean <- df_clean %>% mutate(county_name = replace(county_name, county_name =
 
 There were a number of variables with both a "raw" and "non-raw" column, so we need to decide which column to use:
 
-For driver\_age and driver\_age\_raw, The Stanford Open Policing Project made ages &lt;15 blank in the driver\_age column, which I made NA for easier filtering. It is a fairly logical assumption that ages &lt; 15 were made in error, since in the US, one can't get their driver's permit until they're 15, so the driver\_age column was used throughout the rest of the analysis. Looking at the graph below showing the distribution of traffic stops per driver age, there is a bump in stops near the 100 years old. It doesn't seem reasonable to have many 80+ year old drivers, so under the same assumption of error that &lt; 15 year olds were made NA, 80+ year olds are made NA.
+For driver\_age and driver\_age\_raw, The Stanford Open Policing Project made ages &lt;15 blank in the driver\_age column, which I made NA for easier filtering. It is a fairly logical assumption that ages &lt; 15 were made in error, since in the US, one can't get their driver's permit until they're 15, so the driver\_age column was used throughout the rest of the analysis. Looking at the graph below showing the distribution of traffic stops per driver age, there is a noticeable bump in stops near the 100 years old mark. It doesn't seem reasonable to have many elderly drivers, so under the same assumption of error that &lt; 15 year olds were made NA, 80+ year olds are made NA.
 
 ![](capstone_report_files/figure-markdown_github/unnamed-chunk-7-1.png)
 
@@ -966,7 +966,7 @@ Overall, we see that demographic characteristics of drivers have a statistically
 
 ##### Over-time:
 
-In addition to demographics and stop characteristics, when an individual is stopped seems to have a relation to the likelihood of arrest.
+In addition to demographics and stop characteristics, when the stop occurs also seems to have a relation to the likelihood of arrest.
 
 For example, we see below that the arrests/stops ratio tends to decrease towards the end of the month. In particular, it seems the last third of the month has a significantly lower ratio, a finding supported with the two-proportion z-tests comparing the last third of the month to the rest of the month. To accomplish this analysis, more data wrangling was required, making a day\_of\_month variable.
 
@@ -1047,7 +1047,7 @@ There is one obvious county that doesn't match up: New London. Further investiga
 
 #### Approach:
 
-Since our main question is one of classification; predicting whether a Connecticut State Police traffic stop ends in arrest or not, a supervised classification machine learning algorithm is necessary. Our outcome variable is is\_arrested while a data wrangled subset of the remaining variables in our original dataset make up the predictors. We used almost all of the remaining variables because, as we saw in the visualization and statistics section, all the variables tested had a statistically significant relationship with our outcome variable, making it difficult to pare down. Feature selection was explored, but the results did not yield noticeable changes to performance.
+Since our main question is one of classification; predicting whether a Connecticut State Police traffic stop ends in arrest or not, a supervised classification machine learning algorithm is necessary. Our outcome variable is is\_arrested while a data wrangled subset of the remaining variables in our original dataset make up the predictors. We used all of the remaining variables because, as we saw in the visualization and statistics section, all the variables tested had a statistically significant relationship with our outcome variable, making it difficult to pare down. Feature selection was explored, but the results did not yield noticeable changes to performance.
 
 The details of the data wrangling and NA handling are enumerated below, however, a comprehensive list of the 27 predictor variables used in the final algorithm is as follows:
 
@@ -1070,9 +1070,9 @@ The details of the data wrangling and NA handling are enumerated below, however,
 -   violation\_raw\_Registration
 -   violation\_raw\_Seatbelt
 -   violation\_raw\_Speed.Related
--   violaiton\_raw\_Stop.Sign
+-   violation\_raw\_Stop.Sign
 -   violation\_raw\_Suspended.License
--   violation\_raw\_Traffic.Control.Signla
+-   violation\_raw\_Traffic.Control.Signal
 -   violation\_raw\_Window.Tint
 -   stop\_hour\_part\_of\_day
 -   stop\_season
@@ -1378,7 +1378,7 @@ From our visual analysis, we saw statistically significant discrepancies in arre
 2.  Create training programs
     -   Collecting more data might not be an immediately feasible task for every police department. One way to find the root of some of the demographic discrepancies uncovered in the visual analysis section is to attempt to change police behavior through training programs. If, after the training, the outcomes are the same, police behavior might not have been the problem.
 3.  Create outreach programs and collect subjective data
-    -   While we cannot yet determine the cause of different arrest likelihoods amongst different demographic groups, the disparity exists and is likely felt by many of the communities. No amount of objective data collected can show personal experiences. Anecdotal evidence is an important part of understanding community feelings towards police officers. Creating outreach programs to foster positive relationships and share experiences is a powerful way to address the impact of those disparities and an important part of police being able to do their jobs well. Additionally, collecting data on the anecdotal evidence via surveys, interviews, or some other method, could be a great way to gain a more holistic understanding of the currently available data.
+    -   While we cannot yet determine the cause of different arrest likelihoods amongst different demographic groups, the disparity exists and is likely felt by many of the communities. Anecdotal evidence is an important part of understanding community feelings towards police officers. Creating outreach programs to foster positive relationships and share experiences is a powerful way to address the impact of those disparities and an important part of police being able to do their jobs well. Additionally, collecting data on the anecdotal evidence via surveys, interviews, or some other method, could be a great way to gain a more holistic understanding of the currently available data.
 
 #### Next Steps:
 
