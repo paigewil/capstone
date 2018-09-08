@@ -16,6 +16,7 @@ To this end, we tested multiple supervised machine learning classification model
   * capstone_milestone_report is an extension of the capstone_proposal file, adding the visualization and statistical analysis components
   * machine_learning_report files summarize the supervised machine learning algorithms tested for the classification problem in machine_learning.R, including the final model used
   * capstone_report files contain the final report of the capstone project; summarizing the problem, client, data, data wrangling steps, visualization, statistics, machine learning, and conclusions
+  * Capstone Slide Deck contains the PowerPoint slide deck presentation of the final project, written for a non-technical client audience
 
 *	CSV files: 
     * CT_cleaned.csv is my original dataset containing State Police traffic stop information
